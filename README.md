@@ -54,6 +54,7 @@ Considering:
 2. group of objects (and related resources obtained elsewhere) may be
    operated on in concert, and a single "big" mutex may be able to offer
    "necessary and sufficient" protection.
+
 Applications are recommended to use "cluster mutex" to protect clusters of
 related objects, and not to too frequently call synchronization functions.
 
