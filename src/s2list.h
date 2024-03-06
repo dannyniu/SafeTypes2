@@ -31,6 +31,10 @@ int s2list_shift(T *list, s2obj_t **out);
 //   function is probably inefficient and its use is better avoided.
 int s2list_pop(T *list, s2obj_t **out);
 
+// Retrieves object at current cursor position.
+// Reference and kept counts're not changed.
+int s2list_get(T *list, s2obj_t **out);
+
 // Repositions the cursor.
 #define S2_LIST_SEEK_SET 1
 #define S2_LIST_SEEK_END 2
@@ -41,8 +45,6 @@ typedef int (*s2func_sort_cmp_t)(s2obj_t *a, s2obj_t *b);
 T *s2list_sort(T *list, s2func_sort_cmp_t cmpfunc);
 
 typedef struct s2ctx_list_iter s2list_iter_t;
-
-int s2list_Iterate(T *list);
 
 #ifndef safetypes2_implementing_list
 #undef T

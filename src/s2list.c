@@ -231,6 +231,20 @@ int s2list_pop(T *list, s2obj_t **out)
     return s2list_shift(list, out);
 }
 
+int s2list_get(T *list, s2obj_t **out)
+{
+    S2_LIST_GETTER_ASSERTIONS;
+
+    if( list->pos >= list->len )
+    {
+        *out = NULL;
+        return s2_access_nullval;
+    }
+
+    *out = list->cursor->value;
+    return s2_access_success;
+}
+
 ptrdiff_t s2list_seek(T *list, ptrdiff_t offset, int whence)
 {
     switch( whence )

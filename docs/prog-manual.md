@@ -194,6 +194,9 @@ As noted in the comments for this function in the "s2list.h" header,
 the function is implemented in terms of `s2listShift`, and is inefficient and
 redundant.
 
+The `s2list_get` function gets the object at the current cursor position.
+The reference and kept counts're not changed.
+
 `s2list_seek` alters the current cursor position:
 - when `whence` is `S2_LIST_SEEK_SET`, it's set to 0+offset,
 - when `whence` is `S2_LIST_SEEK_END`, it's set to [length]+offset,
