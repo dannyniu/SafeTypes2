@@ -24,7 +24,10 @@ T *s2data_create(size_t len)
     T *ret = NULL;
     void *buf;
 
-    if( !(buf = calloc(1, len)) )
+    // [2024-03-06-nul-term]:
+    // put a nul byte at the end so that buffer
+    // can be usable as nul-terminated string.
+    if( !(buf = calloc(1, len+1)) )
         return NULL;
 
     ret = (T *)s2gc_obj_alloc(S2_OBJ_TYPE_BLOB, sizeof(T));
@@ -55,6 +58,9 @@ void *s2data_map(T *restrict ctx, size_t offset, size_t len)
 
     ctx->mapcnt++;
     assert( ctx->mapcnt > 0 );
+    
+    // [2024-03-06-nul-term]:
+    ((uint8_t *)ctx->buf)[ctx->len] = '\0';
     return ((uint8_t *)ctx->buf) + offset;
 }
 
@@ -75,7 +81,9 @@ int s2data_trunc(T *restrict ctx, size_t len)
         return -1;
     }
 
-    if( !(tmp = realloc(ctx->buf, len)) ) return -1;
+    // [2024-03-06-nul-term]:
+    if( !(tmp = realloc(ctx->buf, len+1)) ) return -1;
+    ((uint8_t *)ctx->buf)[len] = '\0';
 
     ctx->buf = tmp;
     ctx->len = len;

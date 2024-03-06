@@ -16,6 +16,12 @@ size_t s2data_len(T *restrict ctx);
 // a NULL pointer is returned.
 // ``*_map'' doesn't record the regions requested - it only
 // keeps a number, which is checked by ``*_trunc''.
+//
+// [2024-03-06-nul-term]:
+// In the version suchly tagged, it is safe to pass the entire
+// mapped pointer to functions that expect nul-terminated strings,
+// as the implementation internally adds an extra nul byte
+// just one byte beyond the effective length of the buffer.
 void *s2data_map(T *restrict ctx, size_t offset, size_t len);
 
 // ``*_unmap'' decreases what's increased by ``*_map''.

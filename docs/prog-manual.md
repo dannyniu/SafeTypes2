@@ -132,6 +132,11 @@ it returns a pointer to the initial address of the buffer plus the offset,
 and add 1 to an internal count. Caller is responsible for not accessing 
 beyond the range it had requested of.
 
+Since this [2024-03-06-nul-term] revision, it is safe to pass the entire
+mapped buffer pointer to functions that expect nul-terminated strings,
+as the implementation internally adds an extra nul byte just one byte
+beyond the effective length of the buffer.
+
 `s2data_unmap` decreases the internal count mentioned above. This internal
 count is used to make sure when resizing the buffer, no one accidentally access
 the old invalid buffer address should the underlaying `realloc` call actually
