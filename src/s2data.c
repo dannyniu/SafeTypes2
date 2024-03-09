@@ -59,8 +59,24 @@ void *s2data_map(T *restrict ctx, size_t offset, size_t len)
     ctx->mapcnt++;
     assert( ctx->mapcnt > 0 );
     
-    // [2024-03-06-nul-term]:
-    ((uint8_t *)ctx->buf)[ctx->len] = '\0';
+    // <s>[2024-03-06-nul-term]</s>
+    //
+    // 2024-03-09:
+    // ----
+    //
+    // Concurrent writes are one of the best known undefined race condition
+    // behaviors, and setting the nul terminating byte when mapping the buffer
+    // for multiple threads - even if the mappings are supposedly read-only,
+    // is no exception.
+    //
+    // Setting the nul terminating byte during the map call was a safety
+    // measure in case some application wrote it with some other value.
+    // Considering however, client codes that relied on this behavior is
+    // already faulty, SafeTypes2 developer(s) has therefore decided
+    // that there's no point trading a threading UD for a memory UD.
+    //
+    //- ((uint8_t *)ctx->buf)[ctx->len] = '\0';
+
     return ((uint8_t *)ctx->buf) + offset;
 }
 
