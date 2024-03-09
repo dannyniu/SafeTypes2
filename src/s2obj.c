@@ -148,6 +148,11 @@ void s2gc_obj_dealloc(T *restrict obj)
     free(obj);
 }
 
+void s2gc_set_threading(bool enabled)
+{
+    gc_anch.threaded = enabled;
+}
+
 T *s2obj_retain(T *restrict obj)
 {
     ++obj->refcnt;

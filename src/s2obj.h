@@ -156,6 +156,14 @@ T {
 T *s2gc_obj_alloc(s2obj_typeid_t type, size_t sz);
 void s2gc_obj_dealloc(T *restrict obj);
 
+// 2024-03-09:
+// It is assumed that this will only be called when
+// there's only 1 thread. By default, threading is
+// enabled for GC, and this function is provided for
+// single-threaded applications to avoid costs associated
+// with synchronization.
+void s2gc_set_threading(bool enabled);
+
 // Explicit invocation of SafeTypes2 garbage collection.
 // Only needed if there's "reference cycle".
 void s2gc_collect(void);
