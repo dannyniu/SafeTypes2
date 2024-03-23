@@ -413,7 +413,7 @@ static int s2gc_gcop_unlock()
         // G U    |
         // t u    | g u <-- notice here.
         // ---------------
-        // If we don't stall all the threads that requested GC
+        // We need to stall all the threads that requested GC
         // until the GC is complete, otherwise, the atomicity
         // invariant of ``*_gcop_{,un}lock'' could be violated.
 
