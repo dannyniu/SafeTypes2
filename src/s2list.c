@@ -245,6 +245,9 @@ int s2list_get(T *list, s2obj_t **out)
     return s2_access_success;
 }
 
+ptrdiff_t s2list_pos(T *list){ return list->pos; }
+ptrdiff_t s2list_len(T *list){ return list->len; }
+
 ptrdiff_t s2list_seek(T *list, ptrdiff_t offset, int whence)
 {
     switch( whence )

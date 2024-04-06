@@ -43,9 +43,12 @@ to set the position of the iterator to the initial element.
 
 ```
 s2iter_t *it = s2obj_iter_create(x);
-s2obj_t *e;
-for(e=it->next(it); e; e=it->next(it))
+s2obj_t *val, *key;
+int i;
+for(i=it->next(it); i>0; i=it->next(it))
 {
+    key = it->key;
+    val = it->value;
     .... process 1 member ...
 }
 ```

@@ -35,6 +35,11 @@ int s2list_pop(T *list, s2obj_t **out);
 // Reference and kept counts're not changed.
 int s2list_get(T *list, s2obj_t **out);
 
+// 2024-03-26:
+// Necessary, yet missing. Added.
+ptrdiff_t s2list_pos(T *list);
+ptrdiff_t s2list_len(T *list);
+
 // Repositions the cursor.
 #define S2_LIST_SEEK_SET 1
 #define S2_LIST_SEEK_END 2

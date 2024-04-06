@@ -9,6 +9,7 @@
 typedef T s2data_t;
 
 T *s2data_create(size_t len);
+T *s2data_from_str(const char *s);
 size_t s2data_len(T *restrict ctx);
 
 // ``*_map'' does a simple range check - if it passes,

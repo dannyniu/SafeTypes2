@@ -46,6 +46,17 @@ T *s2data_create(size_t len)
     return ret;
 }
 
+T *s2data_from_str(const char *s)
+{
+    size_t len;
+    T *ret = s2data_create(len = strlen(s));
+    if( !ret ) return NULL;
+
+    strcpy(s2data_map(ret, 0, len), s);
+    s2data_unmap(ret);
+    return ret;
+}
+
 size_t s2data_len(T *restrict ctx)
 {
     return ctx->len;
@@ -53,7 +64,10 @@ size_t s2data_len(T *restrict ctx)
 
 void *s2data_map(T *restrict ctx, size_t offset, size_t len)
 {
-    if( offset      >= ctx->len ) return NULL;
+    // 2024-03-26:
+    // The first check *was*: ``offset >= ctx->len''.
+    // This caused a bit of surprise for codes in the real world.
+    if( offset       > ctx->len ) return NULL;
     if( offset + len > ctx->len ) return NULL;
 
     ctx->mapcnt++;
