@@ -1,7 +1,7 @@
 /* DannyNiu/NJF, 2023-07-15. Public Domain. */
 
-#ifndef SafeTypes_SipHash_H
-#define SafeTypes_SipHash_H 1
+#ifndef SafeTypes2_SipHash_H
+#define SafeTypes2_SipHash_H 1
 
 #include "common.h"
 
@@ -40,4 +40,4 @@ void SipHash_c2d4o128_Final(
     void *restrict out,
     size_t t);
 
-#endif /* SafeTypes_SipHash_H */
+#endif /* SafeTypes2_SipHash_H */

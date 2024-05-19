@@ -1,7 +1,7 @@
 /* DannyNiu/NJF, 2023-06-30. Public Domain. */
 
-#ifndef RCDT_COMMON_H
-#define RCDT_COMMON_H 1
+#ifndef SafeTypes2_Common_H
+#define SafeTypes2_Common_h 1
 
 #ifndef __has_include
 #define __has_include(...) 0
@@ -26,4 +26,4 @@ void *mem_intercept(void *);
 #define free(...) free((frees++, mem_intercept(__VA_ARGS__)))
 #endif /* INTERCEPT_MEM_CALLS */
 
-#endif /* RCDT_COMMON_H */
+#endif /* SafeTypes2_Common_H */
