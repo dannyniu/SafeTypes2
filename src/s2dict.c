@@ -5,6 +5,14 @@
 #include "s2dict.h"
 #include "siphash.h"
 
+// 2024-06-15:
+// The "TODO: errno" comments are altogether removed.
+// According to Single Unix Specification, Rationales
+// Volume, System Interfaces General Information, Error
+// Numbers, it is more preferable that new functions
+// report errors through return values, and this is
+// the approach taken in SafeTypes.
+
 enum s2_dict_member_flags {
     s2_dict_member_null = 0, // unset.
     s2_dict_member_set = 1, // kept-counted reference.
@@ -65,7 +73,6 @@ static void s2dict_free_member(struct s2ctx_dict_member *m)
         break;
 
     default:
-        // TODO: errno.
         break;
     }
 }
@@ -190,7 +197,7 @@ int s2dict_get(T *dict, s2data_t *key, s2obj_t **out)
         case s2_dict_member_collision:
             if( ++level < S2_DICT_HASH_MAX ) V = M->nested; else
             {
-                // TODO: errno.
+                *out = NULL;
                 return s2_access_error;
             }
             break;
@@ -198,7 +205,6 @@ int s2dict_get(T *dict, s2data_t *key, s2obj_t **out)
 
         default:
             *out = NULL;
-            // TODO: errno.
             return s2_access_error;
             break;
         }
@@ -246,14 +252,12 @@ int s2dict_unset(T *dict, s2data_t *key)
         case s2_dict_member_collision:
             if( ++level < S2_DICT_HASH_MAX ) V = M->nested; else
             {
-                // TODO: errno.
                 return s2_access_error;
             }
             break;
 
 
         default:
-            // TODO: errno.
             return s2_access_error;
             break;
         }
@@ -310,7 +314,6 @@ int s2dict_set(T *dict, s2data_t *key, s2obj_t *value, int semantic)
             {
                 if( ++level >= S2_DICT_HASH_MAX )
                 {
-                    // TODO: errno.
                     return s2_access_error;
                     /* NOTREACHED */
                 }
@@ -362,13 +365,11 @@ int s2dict_set(T *dict, s2data_t *key, s2obj_t *value, int semantic)
         case s2_dict_member_collision:
             if( ++level < S2_DICT_HASH_MAX ) V = M->nested; else
             {
-                // TODO: errno.
                 return s2_access_error;
             }
             break;
 
         default:
-            // TODO: errno.
             return s2_access_error;
             break;
         }

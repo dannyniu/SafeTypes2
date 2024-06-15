@@ -103,6 +103,11 @@ int s2data_unmap(T *restrict ctx)
 
 int s2data_trunc(T *restrict ctx, size_t len)
 {
+    // 2024-06-15:
+    // Although error reporting through return values are preferred,
+    // errno is chosen for this function, as one of the subroutines
+    // it invokes already use errno to report errors.
+
     void *tmp;
     
     if( ctx->mapcnt > 0 )
