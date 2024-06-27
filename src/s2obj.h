@@ -78,15 +78,25 @@ typedef void (*s2func_final_t)(T *restrict ctx);
 // - 0x0000: plain type.
 // - 0x1000: container type.
 // - 0x2000: opaque (application-defined) type.
+// ----
+// ---- if <plain type>:
 // - 0x0f00: plain type class mask.
 // - 0x0000: string/blob/misc.
 // - 0x0100: integer type.
 // - 0x0200: floating point type.
+// - 0x0300: array type.
+// ----
+// ---- if <integer type> or <floating point type>:
 // - 0x00c0: endianness mask - not applicable to strings and blobs.
 // - 0x0000: host endianness.
 // - 0x0040: little-endian.
 // - 0x0080: big-endian.
 // - 0x003f: plain type width mask.
+// ----
+// ---- if <array type>:
+// - 0x00ff: array element length mask.
+// ----
+// ---- pre-defined values:
 // - 0x0000: exact value for the null type.
 // - 0x0001: exact value for the raw data type.
 // - 0x0002: exact value for utf-8 string type.
@@ -107,7 +117,7 @@ typedef void (*s2func_final_t)(T *restrict ctx);
 // width is a power of 2 between 1 and 8.
 #define S2_OBJ_TYPE_INT(width)  (0x0100 | (width))
 
-// width is a power of 2 between 2 and 16.
+// width can be a power of 2 between 2 and 16.
 // values other than 4 and 8 may not necessarily be supported.
 #define S2_OBJ_TYPE_FLT(width)  (0x0200 | (width))
 
