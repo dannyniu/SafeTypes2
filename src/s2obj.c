@@ -37,15 +37,12 @@ struct gc_anchor_ctx
     bool gc_inprogress;
 
     // 0: initial state.
-    // 1: gcop_lock in-progress.
-    // 2: gcop_unlock in-progress.
-    short gc_guarding_state;
+    // 1: gcop locking.
+    // 2: gcop unlocking.
+    short stateguard;
 
     // Total GC calls made externally from the ``thr_count'' threads.
     size_t gc_pending;
-
-    // Total threads posessing GC "writer" lock.
-    size_t gc_starting;
 
     // Total threads acquiring GC "writer" lock.
     size_t gc_waiting_enter;
@@ -54,7 +51,8 @@ struct gc_anchor_ctx
     size_t gc_waiting_leave;
 
     // This variable records the number of threads that's
-    // currently occupying some objects created from GC.
+    // currently occupying some objects created from GC -
+    // i.e. holding the shared "reader" lock.
     size_t thr_count;
 
     T *head;
@@ -68,9 +66,8 @@ static struct gc_anchor_ctx gc_anch = {
     .cv_gc_leave = PTHREAD_COND_INITIALIZER,
     .threaded = true,
     .gc_inprogress = false,
-    .gc_guarding_state = 0,
+    .stateguard = 0,
     .gc_pending = 0,
-    .gc_starting = 0,
     .gc_waiting_enter = 0,
     .gc_waiting_leave = 0,
     .thr_count = 0,
@@ -265,13 +262,8 @@ int s2gc_thrd_lock()
         return 0;
     }
 
-    if( (e = pthread_mutex_lock(&gc_anch.lck_master)) )
-        return e;
-
-    while( gc_anch.gc_guarding_state != 0 )
-    {
-        pthread_cond_wait(&gc_anch.cv_threads, &gc_anch.lck_master);
-    }
+    if( (e = pthread_mutex_lock(&gc_anch.lck_master)) != 0 )
+        return -1;
 
     s2gc_thrd_recursion_initializer();
 
@@ -307,15 +299,10 @@ int s2gc_thrd_unlock()
         return 0;
     }
 
-    if( (e = pthread_mutex_lock(&gc_anch.lck_master)) )
-        return e;
+    if( (e = pthread_mutex_lock(&gc_anch.lck_master)) != 0 )
+        return -1;
 
     s2gc_thrd_recursion_initializer();
-
-    while( gc_anch.gc_guarding_state != 0 )
-    {
-        pthread_cond_wait(&gc_anch.cv_threads, &gc_anch.lck_master);
-    }
 
     assert( gc_anch.thr_count > 0 );
 
@@ -371,7 +358,6 @@ static int s2gc_gcop_lock(long id)
 {
     int ret = 0;
     int e = 0;
-    size_t blocked = 0;
     intptr_t threc;
 
     (void)id; // 2024-05-19: was for debugging.
@@ -387,27 +373,18 @@ static int s2gc_gcop_lock(long id)
 
     s2gc_thrd_recursion_initializer();
 
-    while( gc_anch.gc_guarding_state != 0 &&
-           gc_anch.gc_guarding_state != 1 )
+    while( gc_anch.stateguard != 0 && gc_anch.stateguard != 1 )
     {
-        pthread_cond_wait(&gc_anch.cv_gc_enter, &gc_anch.lck_master);
+        e = pthread_cond_wait(&gc_anch.cv_gc_enter, &gc_anch.lck_master);
+        assert( e == 0 );
     }
+    gc_anch.stateguard = 1;
 
     threc = (intptr_t)pthread_getspecific(thrd_recursion_counter);
     assert( threc >= 0 );
 
-    if( gc_anch.gc_guarding_state == 0 )
-    {
-        gc_anch.gc_guarding_state = 1;
-
-        blocked = gc_anch.gc_waiting_enter ++;
-        if( threc == 0 ) gc_anch.gc_pending ++;
-    }
-    else if( gc_anch.gc_guarding_state == 1 )
-    {
-        gc_anch.gc_waiting_enter ++;
-        if( threc == 0 ) gc_anch.gc_pending ++;
-    }
+    gc_anch.gc_waiting_enter ++;
+    if( threc == 0 ) gc_anch.gc_pending ++;
 
     while( gc_anch.gc_waiting_enter < gc_anch.gc_pending + gc_anch.thr_count )
     {
@@ -415,6 +392,8 @@ static int s2gc_gcop_lock(long id)
         e = pthread_cond_wait(&gc_anch.cv_gc_enter, &gc_anch.lck_master);
         assert( e == 0 ); // 2024-02-24: caller can't recover from this error.
     }
+
+    gc_anch.stateguard = 2;
 
     if( !gc_anch.gc_inprogress )
     {
@@ -424,17 +403,6 @@ static int s2gc_gcop_lock(long id)
     {
         ret = 0;
         gc_anch.gc_inprogress = true;
-    }
-
-    if( gc_anch.gc_starting == 0 && gc_anch.gc_guarding_state == 1 )
-        gc_anch.gc_starting = gc_anch.gc_waiting_enter - blocked;
-
-    if( gc_anch.gc_guarding_state == 1 )
-    {
-        if( --gc_anch.gc_starting == 0 )
-        {
-            gc_anch.gc_guarding_state = 0;
-        }
     }
 
     // 2024-02-24 (low-priority):
@@ -455,7 +423,7 @@ static int s2gc_gcop_lock(long id)
 static int s2gc_gcop_unlock(long id)
 {
     int e = 0;
-    intptr_t threc;
+    //- intptr_t threc;
 
     (void)id; // 2024-05-19: was for debugging.
 
@@ -466,22 +434,21 @@ static int s2gc_gcop_unlock(long id)
     }
 
     if( (e = pthread_mutex_lock(&gc_anch.lck_master)) )
-        return e;
+        return -1;
 
     s2gc_thrd_recursion_initializer();
 
-    while( gc_anch.gc_guarding_state != 0 &&
-           gc_anch.gc_guarding_state != 2 )
+    while( gc_anch.stateguard != 2 )
     {
-        pthread_cond_wait(&gc_anch.cv_gc_leave, &gc_anch.lck_master);
+        e = pthread_cond_wait(&gc_anch.cv_gc_leave, &gc_anch.lck_master);
+        assert( e == 0 );
     }
 
-    gc_anch.gc_guarding_state = 2;
     ++gc_anch.gc_waiting_leave;
 
-    threc = (intptr_t)pthread_getspecific(thrd_recursion_counter);
-    assert( threc >= 0 );
-    //if( threc > 0 ) --gc_anch.gc_pending;
+    //- threc = (intptr_t)pthread_getspecific(thrd_recursion_counter);
+    //- assert( threc >= 0 );
+    //- if( threc > 0 ) --gc_anch.gc_pending;
 
     while( gc_anch.gc_waiting_enter > gc_anch.gc_waiting_leave )
     {
@@ -509,9 +476,16 @@ static int s2gc_gcop_unlock(long id)
     if( gc_anch.gc_waiting_leave == 0 )
     {
         assert( gc_anch.gc_waiting_enter == 0 );
-        gc_anch.gc_guarding_state = 0;
         gc_anch.gc_inprogress = false;
+
+        // 2024-06-30:
+        // was consulting ``threc''. now arbitriating.
         gc_anch.gc_pending = 0;
+
+        // 2024-06-03:
+        // final line after refactoring ''state guard''
+        // previously known as ''guarding state''.
+        gc_anch.stateguard = 0;
     }
 
     // 2024-02-24: ignoring (possibly fatal) error(s) for now.
@@ -522,127 +496,6 @@ static int s2gc_gcop_unlock(long id)
     pthread_mutex_unlock(&gc_anch.lck_master);
     return 0;
 }
-
-#ifdef UniTest_S2GC_Locking
-
-#include <unistd.h>
-
-static int ctr = -1;
-static int ctr_sem = 3;
-static pthread_mutex_t m_prog = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t cv_prog = PTHREAD_COND_INITIALIZER;
-
-#define PROG_DEF(arg_id, arg_call)                              \
-    { .id = arg_id, .call = arg_call, .label = #arg_call }
-
-static int barr()
-{
-    static pthread_mutex_t m_barr = PTHREAD_MUTEX_INITIALIZER;
-    static pthread_cond_t cv_barr = PTHREAD_COND_INITIALIZER;
-
-    pthread_mutex_lock(&m_barr);
-    ctr_sem --;
-    pthread_cond_broadcast(&cv_barr);
-    while( ctr_sem > 0 )
-    {
-        pthread_cond_wait(&cv_barr, &m_barr);
-    }
-    pthread_mutex_unlock(&m_barr);
-
-    // sleep(1); // 2024-05-15: old implementation.
-    return 0;
-}
-
-//static int brst(){ ctr_sem = 3; return 0; }
-
-static struct progress_entry {
-    int id;
-    union {
-        int (*call)();
-        int (*invoke)(long id);
-    };
-    char *label;
-} progress[] = {
-    PROG_DEF(1, s2gc_thrd_lock), // 0
-    PROG_DEF(1, s2gc_thrd_lock), // 1
-    PROG_DEF(2, s2gc_thrd_lock), // 2
-    PROG_DEF(1, barr), // 3
-    PROG_DEF(2, barr), // 4
-    PROG_DEF(3, barr), // 5
-    PROG_DEF(3, s2gc_gcop_lock), // 6
-    PROG_DEF(1, s2gc_gcop_lock), // 7
-    PROG_DEF(2, s2gc_gcop_lock), // 8
-
-    PROG_DEF(3, s2gc_gcop_unlock), // 9
-    PROG_DEF(1, s2gc_gcop_unlock), // 10
-    PROG_DEF(2, s2gc_gcop_unlock), // 11
-
-    PROG_DEF(1, s2gc_thrd_unlock), // 12
-
-    PROG_DEF(1, s2gc_gcop_lock), // 13
-    PROG_DEF(2, s2gc_gcop_lock), // 14
-    PROG_DEF(1, s2gc_gcop_unlock), // 15
-    PROG_DEF(2, s2gc_gcop_unlock), // 16
-    PROG_DEF(1, s2gc_thrd_unlock), // 17
-    PROG_DEF(2, s2gc_thrd_unlock), // 18
-    PROG_DEF(0, NULL),
-};
-
-static void iwaitfor(int i)
-{
-    pthread_mutex_lock(&m_prog);
-    while( ctr < i )
-    {
-        pthread_cond_wait(&cv_prog, &m_prog);
-    }
-    ctr++;
-    pthread_cond_broadcast(&cv_prog);
-    pthread_mutex_unlock(&m_prog);
-}
-
-static intptr_t thrd(intptr_t id)
-{
-    for(long i=0; progress[i].call; i++)
-    {
-        if( id != progress[i].id && progress[i].id != 0 ) continue;
-        iwaitfor(i);
-        printf("%ld: calling %s from %ld, "
-               "gc-waiting: %zd - %zd.\n",
-               i, progress[i].label, (long)id,
-               gc_anch.gc_waiting_enter,
-               gc_anch.gc_waiting_leave);
-
-        if( progress[i].call == s2gc_gcop_lock ||
-            progress[i].call == s2gc_gcop_unlock )
-            progress[i].invoke(id);
-        else progress[i].call();
-
-        printf("%ld: call of %s returned in thread %ld, "
-               "gc-waiting: %zd - %zd.\n",
-               i, progress[i].label, (long)id,
-               gc_anch.gc_waiting_enter,
-               gc_anch.gc_waiting_leave);
-    }
-    return id;
-}
-
-typedef void *(*thrd_entry_func_t)(void *);
-
-int main()
-{
-    pthread_t t1, t2, t3;
-    pthread_create(&t1, NULL, (thrd_entry_func_t)thrd, (void *)1);
-    pthread_create(&t2, NULL, (thrd_entry_func_t)thrd, (void *)2);
-    pthread_create(&t3, NULL, (thrd_entry_func_t)thrd, (void *)3);
-    iwaitfor(-1);
-    pthread_cond_broadcast(&cv_prog);
-    pthread_join(t1, NULL);
-    pthread_join(t2, NULL);
-    pthread_join(t3, NULL);
-    return 0;
-}
-
-#endif /* UniTest_S2GC_Locking */
 
 void s2gc_collect(void)
 {

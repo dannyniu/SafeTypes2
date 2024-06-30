@@ -1,7 +1,9 @@
 #!/bin/sh
 
+#optimize=debug
 testfunc() {
-    $exec
+    #lldb \
+        $exec
 }
 
 cd "$(dirname "$0")"
@@ -9,10 +11,9 @@ unitest_sh=./unitest.sh
 . $unitest_sh
 
 src="\
-./s2obj.c
+./s2obj-locking-test.c
 "
 
-cflags="-D UniTest_S2GC_Locking"
 arch_family=defaults
 srcset="Plain C"
 
