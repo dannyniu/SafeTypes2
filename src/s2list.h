@@ -6,6 +6,10 @@
 #include "s2obj.h"
 #include "s2containers.h"
 
+// 2024-07-27:
+// Added type check macro.
+#define s2_is_list(obj) (obj->type == S2_OBJ_TYPE_LIST)
+
 #define T struct s2ctx_list
 typedef T s2list_t;
 
@@ -55,4 +59,4 @@ typedef struct s2ctx_list_iter s2list_iter_t;
 #undef T
 #endif /* safetypes2_implementing_list */
 
-#endif /* SafeTypes2_Dict_H */
+#endif /* SafeTypes2_List_H */

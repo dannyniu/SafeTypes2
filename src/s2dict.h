@@ -10,6 +10,10 @@
 // Using SipHash-2-4-128.
 #define S2_DICT_HASH_MAX 16
 
+// 2024-07-27:
+// Added type check macro.
+#define s2_is_dict(obj) (obj->type == S2_OBJ_TYPE_DICT)
+
 #define T struct s2ctx_dict
 typedef T s2dict_t;
 

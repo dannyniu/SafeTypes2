@@ -5,6 +5,11 @@
 
 #include "common.h"
 
+// 2024-07-27:
+// Added type check macro.
+// Check type mask with "s2obj.h".
+#define s2_is_data(obj) ((obj->type & 0x3000) == 0x0000)
+
 #define T struct s2ctx_data
 typedef T s2data_t;
 
@@ -27,14 +32,15 @@ void *s2data_map(T *restrict ctx, size_t offset, size_t len);
 
 // ``*_unmap'' decreases what's increased by ``*_map''.
 // The numbers of ``*_map'' and ``*_unmap'' should match.
+// Currently there's no error defined, and 0 is returned.
 int s2data_unmap(T *restrict ctx);
 
 // If there's someone mapping the data (i.e. more ``*_map''
 // than ``*_unmap''), then this function returns -1; it also
 // returns -1 when the memory reallocation fails.
 // Otherwise, the internal buffer is resized. Contrary to what
-// the name suggests, len can be greater than 'len', and this is
-// in fact a resize operation (it invokes ``realloc'').
+// the name suggests, expansion is also possible, and this is
+// in fact a resize operation (it internally invokes ``realloc'').
 int s2data_trunc(T *restrict ctx, size_t len);
 
 // 2024-02-25: This is a new interface in SafeTypes2.

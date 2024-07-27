@@ -79,7 +79,7 @@ T *s2list_create()
     T *list;
 
     list = (T *)s2gc_obj_alloc(S2_OBJ_TYPE_LIST, sizeof(T));
-    if( !list) return NULL;
+    if( !list ) return NULL;
 
     list->basetype.itercreatf = (s2func_iter_create_t)s2list_iter_create;
     list->basetype.finalf = (s2func_final_t)s2list_final;

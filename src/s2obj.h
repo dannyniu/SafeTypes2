@@ -55,8 +55,12 @@ struct s2ctx_iter
     // If key is an object, it's an unretained reference to the
     // internal structure member, so it shouldn't be modified or
     // have its reference or kept count changed.
-    void *restrict key;
-    T *restrict value;
+    //
+    // 2024-07-27:
+    // The following 2 was mistakenly restrict-qualified. Now corrected.
+    //
+    void *key;
+    T *value;
 
 #ifndef safetype2_included_internally
     int payload_context[];
