@@ -13,6 +13,13 @@
 #define T struct s2ctx_list
 typedef T s2list_t;
 
+#ifndef safetypes2_implementing_list
+T {
+    s2obj_t base;
+    int payload_context[];
+};
+#endif /* safetypes2_implementing_list */
+
 T *s2list_create();
 
 // - Inserts an element at the cursor without advancing it.

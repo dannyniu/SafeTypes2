@@ -13,6 +13,13 @@
 #define T struct s2ctx_data
 typedef T s2data_t;
 
+#ifndef safetypes2_implementing_data
+T {
+    s2obj_t base;
+    int payload_context[];
+};
+#endif /* safetypes2_implementing_data */
+
 T *s2data_create(size_t len);
 T *s2data_from_str(const char *s);
 size_t s2data_len(T *restrict ctx);

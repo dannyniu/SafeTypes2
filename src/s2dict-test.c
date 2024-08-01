@@ -31,14 +31,25 @@ int main(void)
         v = s2data_create(sizeof(long));
         *(long *)s2data_map(v, 0, sizeof(long)) = i;
         s2data_unmap(v);
-        s2dict_set(x, k, (void *)v, s2_setter_gave);
+
+        // 2024-08-01.a: # this note is referred to from other tests.
+        // The following is a short comparison of verbosity of previous
+        // language/library constructs and the current one. Note that
+        // the previous versions couldn't enforce strong type safety,
+        // and explicit castings were used.
+        //- s2dict_set(x, k, (s2obj_t *)v, s2_setter_gave);
+        //- s2dict_set(x, k, (void *)v, s2_setter_gave);
+        ;;  s2dict_set(x, k, &v->base, s2_setter_gave);
     }
     
     for(i=0; i<512; i++)
     {
         memset(kraw, 0, klen);
         snprintf(kraw, klen, "%d", i);
-        
+
+        // 2024-08-01.b:
+        // This is a nested pointer, and unfortunately
+        // cannot have strong type safety enforcement.
         ret = s2dict_get(x, k, (void *)&v);
         
         if( ret != s2_access_success )
@@ -60,6 +71,7 @@ int main(void)
         memset(kraw, 0, klen);
         snprintf(kraw, klen, "!%d", i);
         
+        // 2024-08-01: see note labelled 2024-08-01.b.
         ret = s2dict_get(x, k, (void *)&v);
 
         if( ret != s2_access_nullval )
@@ -69,7 +81,10 @@ int main(void)
         }
     }
 
-    iter = s2obj_iter_create((s2obj_t *)x);
+    // 2024-08-01: see note labelled 2024-08-01.a.
+    //- iter = s2obj_iter_create((s2obj_t *)x);
+    //- iter = s2obj_iter_create((void *)x);
+    ;;  iter = s2obj_iter_create(&x->base);
     while( iter->next(iter) > 0 )
     {
         v = (s2data_t *)iter->value;
@@ -97,6 +112,7 @@ int main(void)
             printf("Failed to verify unset for key: %s\n", kraw);
         }
 
+        // 2024-08-01: see note labelled 2024-08-01.b.
         ret = s2dict_get(x, k, (void *)&v);
         if( ret != s2_access_nullval )
         {

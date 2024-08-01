@@ -17,6 +17,13 @@
 #define T struct s2ctx_dict
 typedef T s2dict_t;
 
+#ifndef safetypes2_implementing_dict
+T {
+    s2obj_t base;
+    int payload_context[];
+};
+#endif /* safetypes2_implementing_dict */
+
 void siphash_setkey(void const *restrict in, size_t inlen);
 
 T *s2dict_create();

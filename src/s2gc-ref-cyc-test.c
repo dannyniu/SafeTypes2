@@ -68,23 +68,28 @@ int main()
         ((s2obj_t *)view)->dbg_c = 'v';
         ((s2obj_t *)view)->dbg_i = i;
 #endif /* EnableDebugging */
-        
-        s2dict_set(view,  k_parent,  (s2obj_t *)frame, s2_setter_kept);
-        s2dict_set(view,  k_root,    (s2obj_t *)root,  s2_setter_kept);
-        s2dict_set(frame, k_toc,     (s2obj_t *)toc,   s2_setter_kept);
-        s2dict_set(frame, k_content, (s2obj_t *)view,  s2_setter_gave);
 
-        s2list_push(root, (s2obj_t *)frame, s2_setter_gave);
+        // See note 2024-08-01.a in "s2dict-test.c"
+        //- s2dict_set(view,  k_parent,  (s2obj_t *)frame, s2_setter_kept);
+        //- s2dict_set(view,  k_root,    (s2obj_t *)root,  s2_setter_kept);
+        //- s2dict_set(frame, k_toc,     (s2obj_t *)toc,   s2_setter_kept);
+        //- s2dict_set(frame, k_content, (s2obj_t *)view,  s2_setter_gave);
+        ;;  s2dict_set(view,  k_parent,  &frame->base, s2_setter_kept);
+        ;;  s2dict_set(view,  k_root,    &root->base,  s2_setter_kept);
+        ;;  s2dict_set(frame, k_toc,     &toc->base,   s2_setter_kept);
+        ;;  s2dict_set(frame, k_content, &view->base,  s2_setter_gave);
+
+        s2list_push(root, &frame->base, s2_setter_gave);
     }
     printf("toc: %p, root: %p.\n", toc, root);
 
-    s2obj_release((s2obj_t *)toc);
-    s2list_push(root, (s2obj_t *)root, s2_setter_gave);
+    s2obj_release(&toc->base);
+    s2list_push(root, &root->base, s2_setter_gave);
 
-    s2obj_release((s2obj_t *)k_toc);
-    s2obj_release((s2obj_t *)k_content);
-    s2obj_release((s2obj_t *)k_parent);
-    s2obj_release((s2obj_t *)k_root);
+    s2obj_release(&k_toc->base);
+    s2obj_release(&k_content->base);
+    s2obj_release(&k_parent->base);
+    s2obj_release(&k_root->base);
 
     s2gc_collect();
 

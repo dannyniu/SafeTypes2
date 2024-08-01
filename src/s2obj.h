@@ -159,9 +159,15 @@ T {
     s2func_iter_create_t itercreatf;
     s2func_final_t finalf;
 
-#ifndef safetype2_included_internally
-    int payload_context[];
-#endif /* safetype2_included_internally */
+    // 2024-08-01:
+    // There was an unsized array of int at the end to ensure s2obj_t is
+    // incomplete and cannot be declared as lexical variable unless it's
+    // a pointer. However, considering that it's not useful to have an
+    // object header without any content and value, this restriction is
+    // removed. Subsequently, concrete types defined/declared elsewhere
+    // will be able to include an `s2obj_t base;` field at the head, allowing
+    // type-safe passing of derived types to variables and parameters
+    // expecting generic base objects.
 };
 
 // 2024-02-25:

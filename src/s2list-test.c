@@ -30,7 +30,7 @@ int main(void)
         *(long *)s2data_map(v, 0, sizeof(long)) = i;
         s2data_unmap(v);
 
-        if( s2list_push(x, (void *)v, s2_setter_gave) != s2_access_success )
+        if( s2list_push(x, &v->base, s2_setter_gave) != s2_access_success )
             printf("List Push Failed!\n"), fails ++;
     }
 
@@ -43,7 +43,7 @@ int main(void)
         if( s2list_seek(x, -1, S2_LIST_SEEK_CUR) == -1 )
             printf("CUR Seek on Live List Failed!\n"), fails ++;
         
-        if( s2list_insert(x, (void *)v, s2_setter_gave) != s2_access_success )
+        if( s2list_insert(x, &v->base, s2_setter_gave) != s2_access_success )
             printf("List Insert Failed!\n"), fails ++;
     }
 
@@ -56,7 +56,7 @@ int main(void)
         *(long *)s2data_map(v, 0, sizeof(long)) = i;
         s2data_unmap(v);
 
-        if( s2list_insert(x, (void *)v, s2_setter_gave) != s2_access_success )
+        if( s2list_insert(x, &v->base, s2_setter_gave) != s2_access_success )
             printf("List Insert Failed!\n"), fails ++;
     }
 
@@ -69,11 +69,11 @@ int main(void)
         *(long *)s2data_map(v, 0, sizeof(long)) = i;
         s2data_unmap(v);
 
-        if( s2list_push(x, (void *)v, s2_setter_gave) != s2_access_success )
+        if( s2list_push(x, &v->base, s2_setter_gave) != s2_access_success )
             printf("List Push Failed!\n"), fails ++;
     }
 
-    iter = s2obj_iter_create((void *)x);
+    iter = s2obj_iter_create(&x->base);
     for(ret=iter->next(iter), i=0; ret>0; ret=iter->next(iter), i++)
     {
         v = (void *)iter->value;
@@ -103,7 +103,7 @@ int main(void)
         }
         s2data_unmap(v);
 
-        s2obj_release((void *)v);
+        s2obj_release(&v->base);
     }
    
     s2list_seek(x, 0, S2_LIST_SEEK_END);
@@ -119,7 +119,7 @@ int main(void)
         }
         s2data_unmap(v);
         
-        s2obj_release((void *)v);
+        s2obj_release(&v->base);
     }
 
     s2list_seek(x, -1, S2_LIST_SEEK_END);

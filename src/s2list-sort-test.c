@@ -5,7 +5,7 @@
 #include <time.h>
 
 typedef struct {
-    s2obj_t basetype;
+    s2obj_t base;
     int v;
 } s2val_t;
 
@@ -36,14 +36,17 @@ int main()
                 vals[i] = (s2val_t *)s2gc_obj_alloc(0x0104, sizeof(s2val_t));
 
             vals[i]->v = rand() % VAL_MOD;
-            s2list_push(list, (s2obj_t *)vals[i], s2_setter_kept);
+
+            // See 2024-08-01.a note in "s2dict-test.c"
+            //- s2list_push(list, (s2obj_t *)vals[i], s2_setter_kept);
+            ;;  s2list_push(list, &vals[i]->base, s2_setter_kept);
         }
 
         s2list_sort(list, (s2func_sort_cmp_t)s2val_cmp);
 
         if( l > 0 )
         {
-            iter = s2obj_iter_create((s2obj_t *)list);
+            iter = s2obj_iter_create(&list->base);
             iter->next(iter);
             s = ((s2val_t *)iter->value)->v;
         }
@@ -57,7 +60,7 @@ int main()
                 s = ((s2val_t *)iter->value)->v;
         }
 
-        s2obj_release((s2obj_t *)list);
+        s2obj_release(&list->base);
     }
 
     return EXIT_SUCCESS;
