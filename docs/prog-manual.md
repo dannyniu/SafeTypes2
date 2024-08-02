@@ -120,6 +120,11 @@ type-checking macros are added:
 - `s2_is_dict(obj)`
 - `s2_is_list(obj)`
 
+When objects of other concrete data types are passed to parameters or assigned
+to variables of `s2obj_t *`, one can write `&obj->base` to let compiler enforce
+type safety. Getting objects out of containers is unfortunately at this moment
+not type-safe, as the type of the parameter is `s2obj_t **` - a nested pointer.
+
 ## 2.2. `s2data_t`
 
 This type is used to hold arbitrary data. The design goal has been to make it
