@@ -243,6 +243,15 @@ a "pair" type using SafeTypes2 facility.
 #define T struct typectx_pair
 typedef T pair_t;
 
+#ifndef mylibrary_implementing_pair
+// This allows enforcing type-safe passing of the 'pair' type
+// to variables and parameters.
+T {
+    s2obj_t base;
+    int payload_context[];
+};
+#endif /* mylibrary_implementing_pair
+
 // ``refcnt'' and ``keptcnt'' are not incremented.
 int pair_get_left (T *pair, s2data_t **out);
 int pair_set_right(T *pair, s2data_t **out);
