@@ -267,6 +267,29 @@ int s2gc_thrd_lock()
 
     s2gc_thrd_recursion_initializer();
 
+    // 2024-08-13:
+    // Observe that setting state-guard to 2 and gc-inprogress to true
+    // happens while lck-master is held by gcop-lock, there's no chance
+    // for the condition variable wait on predicate in the following
+    // 2 while loops to become inconsistent.
+
+    while( gc_anch.stateguard != 0 && gc_anch.stateguard != 1 )
+    {
+        // 2024-08-13:
+        //
+        // As noted in gcop-lock, there was a rare-occuring deadlock.
+        // The duration of the GC lock spans from state-guard become
+        // non-zero to back to zero, and should be atomic - this was
+        // violated when gcop-unlock waits for state-guard to become
+        // 2 while a thrd-lock is requested.
+        //
+        // Several invariants relied on this atomicity, such as
+        // the consistency of thr-count and the per-thread threc.
+        //
+        e = pthread_cond_wait(&gc_anch.cv_threads, &gc_anch.lck_master);
+        assert( e == 0 );
+    }
+
     while( gc_anch.gc_inprogress )
     {
         // 2024-05-15:
@@ -303,6 +326,13 @@ int s2gc_thrd_unlock()
         return -1;
 
     s2gc_thrd_recursion_initializer();
+
+    while( gc_anch.stateguard != 0 && gc_anch.stateguard != 1 )
+    {
+        // 2024-08-13: See notes in thrd-lock.
+        e = pthread_cond_wait(&gc_anch.cv_threads, &gc_anch.lck_master);
+        assert( e == 0 );
+    }
 
     assert( gc_anch.thr_count > 0 );
 
@@ -373,6 +403,18 @@ static int s2gc_gcop_lock(long id)
 
     s2gc_thrd_recursion_initializer();
 
+    // 2024-08-13:
+    //
+    // A rare-occuring behavior was observed where 3 separate threads
+    // simultaneously waits on state-guard, gc-enter cv, and gc-leave cv.
+    // Debug trace show that state-guard has value 2 at this instance,
+    // suggesting issue roots externally to the gcop-{,un}lock functions.
+    //
+    // It is possible that a reader/shared lock is requested while some
+    // threads are waiting 1.) to enter GC and 2.) for the state-guard
+    // to reset to 0 or set to 1. These occur by virtue of CV broadcast
+    // from the gcop-{,un}lock call in one or more thread(s).
+    //
     while( gc_anch.stateguard != 0 && gc_anch.stateguard != 1 )
     {
         e = pthread_cond_wait(&gc_anch.cv_gc_enter, &gc_anch.lck_master);
@@ -465,7 +507,7 @@ static int s2gc_gcop_unlock(long id)
         // ---------------
         // We need to stall all the threads that requested GC
         // until the GC is complete, otherwise, the atomicity
-        // invariant of ``*_gcop_{,un}lock'' could be violated.
+        // invariant of ``*_gcop_{,un}lock'' will be violated.
 
         e = pthread_cond_wait(&gc_anch.cv_gc_leave, &gc_anch.lck_master);
         assert( e == 0 ); // 2024-02-24: caller can't recover from this error.

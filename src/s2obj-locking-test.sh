@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#optimize=debug
+optimize=debug
 testfunc() {
     #lldb \
         $exec
