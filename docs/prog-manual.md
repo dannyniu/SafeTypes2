@@ -336,6 +336,16 @@ int pair_set_right(T *pair, s2data_t *in, int semantic)
 }
 ```
 
+It needs to be heeded that, if your type contain component(s) that're container
+types, or type that refer to objects of arbitrary type, then your type need to
+implement an iterator that enumerates at least these components - this is
+needed for GC to function correctly.
+
+For example, if your type contain a component that is a dict or list, then
+you need to implement the iterator; if however there's only data, then it's
+not needed, as `s2data_t` isn't a container type and doesn't reference other
+objects.
+
 # 4. Other Info
 
 The SafeTypes2 library is free and open-source software place in the
