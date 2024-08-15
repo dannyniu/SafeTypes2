@@ -195,7 +195,8 @@ void s2obj_release(T *restrict obj)
         // are deallocated beforehand and no
         // deadlock can occur with the following
         // deallocation call to the current object.
-        obj->finalf(obj);
+        if( obj->finalf ) // 2024-08-15: weak reference support
+            obj->finalf(obj);
 
         if( gc_anch.gc_inprogress )
         {
@@ -220,7 +221,8 @@ void s2obj_leave(T *restrict obj)
             obj->guard = 1;
 
         // 2024-02-21: see note in ``*_release''.
-        obj->finalf(obj);
+        if( obj->finalf ) // 2024-08-15: weak reference support
+            obj->finalf(obj);
 
         if( gc_anch.gc_inprogress )
         {

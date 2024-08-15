@@ -228,6 +228,24 @@ The `cmpfunc` shall be compatible with the prototype:
 ordered before b, and greater than 0 if ordered after, and 0 if a and b
 are equivalent in order.
 
+## 2.5. `s2ref_t`
+
+The reference type `s2ref_t` serves 2 purposes:
+
+1. it allows arbitrary user resource from the application or 3rd-party library
+   be managed under SafeTypes2.
+
+2. it enables the program to (either entirely, or in compartments) opt out of
+   garbage collection and use weak references instead.
+
+The `s2ref_create(ptr, finalizer)` function creates a reference that contains
+the resource referred to by `ptr`, and finalized by calling `finalizer(ptr)`.
+
+The `s2ref_create_weakref(ptr)` function is equivalent to
+calling `s2ref_create(ptr, NULL)`.
+
+The `s2ref_unwrap(ref)` returns the `ptr` specified during creation.
+
 # 3. Custom Types
 
 It is possible to define custom data types that can integrate into the

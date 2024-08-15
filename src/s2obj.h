@@ -127,6 +127,7 @@ typedef void (*s2func_final_t)(T *restrict ctx);
 
 #define S2_OBJ_TYPE_DICT        0x1001
 #define S2_OBJ_TYPE_LIST        0x1002
+#define S2_OBJ_TYPE_REF         0x1003
 
 typedef uint16_t s2obj_typeid_t;
 
