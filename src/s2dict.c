@@ -41,8 +41,6 @@ T {
     struct s2ctx_dict_table root;
 };
 
-typedef void (*rcdt_destructor_func)(void *);
-
 static_assert( S2_DICT_HASH_MAX == 16,
                "Code changed too radically, cannot compile!");
 static uint8_t key_siphash[S2_DICT_HASH_MAX];

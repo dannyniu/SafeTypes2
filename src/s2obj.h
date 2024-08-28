@@ -5,9 +5,10 @@
 
 #include "common.h"
 
-#if defined(safetypes2_implementing_data) ||    \
-    defined(safetypes2_implementing_dict) ||    \
-    defined(safetypes2_implementing_list) ||    \
+#if defined(safetypes2_implementing_data) ||                            \
+    defined(safetypes2_implementing_dict) ||                            \
+    defined(safetypes2_implementing_list) ||                            \
+    defined(safetypes2_implementing_ref)  ||                            \
     defined(safetypes2_implementing_misc) // for user-defined types.
 #define safetype2_included_internally
 #endif /* !defined(safetype2_implementing_{data,dict,list}) */       
@@ -61,10 +62,6 @@ struct s2ctx_iter
     //
     void *key;
     T *value;
-
-#ifndef safetype2_included_internally
-    int payload_context[];
-#endif /* safetype2_included_internally */
 };
 
 // Returns non-NULL on success and NULL on failure.

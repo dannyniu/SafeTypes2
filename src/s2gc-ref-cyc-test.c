@@ -22,6 +22,8 @@ int main()
     int ret = EXIT_SUCCESS;
     int i;
 
+    s2gc_set_threading(false);
+
     root = s2list_create();
 #if EnableDebugging
     ((s2obj_t *)root)->dbg_c = 'L';

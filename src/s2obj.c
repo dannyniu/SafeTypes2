@@ -396,6 +396,14 @@ static int s2gc_gcop_lock(long id)
 
     if( !gc_anch.threaded )
     {
+        // 2024-08-28:
+        // On 2024-03-09, support was added to allow application to
+        // opt-out of the overhead associated multi-threading GC
+        // synchronization. However, the GC operation internal
+        // protection was missing. The following line is added to
+        // retroactively fix that.
+        gc_anch.gc_inprogress = true;
+
         // The application is single-threaded, no need to lock.
         return 1; // This return value is special & specific *here*.
     }
@@ -473,6 +481,10 @@ static int s2gc_gcop_unlock(long id)
 
     if( !gc_anch.threaded )
     {
+        // 2024-08-28:
+        // See note in ``s2gc_gcop_lock'' dated today.x
+        gc_anch.gc_inprogress = false;
+
         // The application is single-threaded, no need to lock.
         return 1; // This return value is special & specific *here*.
     }
