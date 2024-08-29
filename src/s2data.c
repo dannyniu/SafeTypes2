@@ -30,6 +30,8 @@ T *s2data_create(size_t len)
     if( !(buf = calloc(1, len+1)) )
         return NULL;
 
+    ((char *)buf)[len] = '\0';
+
     ret = (T *)s2gc_obj_alloc(S2_OBJ_TYPE_BLOB, sizeof(T));
     if( !ret )
     {
@@ -118,7 +120,7 @@ int s2data_trunc(T *restrict ctx, size_t len)
 
     // [2024-03-06-nul-term]:
     if( !(tmp = realloc(ctx->buf, len+1)) ) return -1;
-    ((uint8_t *)ctx->buf)[len] = '\0';
+    ((uint8_t *)tmp)[len] = '\0';
 
     ctx->buf = tmp;
     ctx->len = len;
