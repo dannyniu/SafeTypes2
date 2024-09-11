@@ -145,6 +145,13 @@ mapped buffer pointer to functions that expect nul-terminated strings,
 as the implementation now internally adds an extra nul byte just one byte
 beyond the effective length of the buffer.
 
+The implementation allocates a buffer in addition to the `s2data_t` context
+working data structure to hold the actual data. In versions after 2024-09-11,
+when the requested buffer size is small (less than or equal to 19 bytes), 
+the data is held "inline" in the context working data structure to save the
+additional allocation of the buffer to save heap space, and to accelerate
+processing of small datum.
+
 `s2data_unmap(x)` decreases the internal count mentioned above. This internal
 count is used to make sure when resizing the buffer, no one accidentally access
 the old invalid buffer address should the underlaying `realloc` call actually

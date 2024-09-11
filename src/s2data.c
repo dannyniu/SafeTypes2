@@ -5,45 +5,65 @@
 #include "s2obj.h"
 #include "s2data.h"
 
+#define DATA_INLINE_MAX 19
+
 struct s2ctx_data {
     s2obj_t basetype;
     size_t len;
-    void *buf;
     long mapcnt;
+    union {
+        void *ptr;
+        uint8_t buf[DATA_INLINE_MAX+1];
+    };
 };
 
 static void s2data_final(T *restrict ctx)
 {
     // this can optionally be enabled:
     // memset(ctx->buf, 0, ctx->len);
-    free(ctx->buf);
+    if( ctx->len > DATA_INLINE_MAX )
+        free(ctx->ptr);
 }
 
 T *s2data_create(size_t len)
 {
     T *ret = NULL;
-    void *buf;
+    void *ptr = NULL;
 
-    // [2024-03-06-nul-term]:
-    // put a nul byte at the end so that buffer
-    // can be usable as nul-terminated string.
-    if( !(buf = calloc(1, len+1)) )
-        return NULL;
-
-    ((char *)buf)[len] = '\0';
+    if( len > DATA_INLINE_MAX )
+    {
+        if( !(ptr = calloc(1, len+1)) )
+            return NULL;
+    }
 
     ret = (T *)s2gc_obj_alloc(S2_OBJ_TYPE_BLOB, sizeof(T));
     if( !ret )
     {
-        free(buf);
+        // ptr is initialized before receiving allocation assignment.
+        free(ptr);
         return NULL;
     }
+    else
+    {
+        if( ptr )
+        {
+            ret->ptr = ptr;
+        }
+        else
+        {
+            ptr = ret->buf;
+        }
+    }
+
+    // [2024-03-06-nul-term]:
+    // put a nul byte at the end so that buffer
+    // can be usable as nul-terminated string.
+    ((char *)ptr)[len] = '\0';
 
     ret->basetype.itercreatf = NULL;
     ret->basetype.finalf = (s2func_final_t)s2data_final;
 
     ret->len = len;
-    ret->buf = buf;
     ret->mapcnt = 0;
     return ret;
 }
@@ -93,7 +113,9 @@ void *s2data_map(T *restrict ctx, size_t offset, size_t len)
     //
     //- ((uint8_t *)ctx->buf)[ctx->len] = '\0';
 
-    return ((uint8_t *)ctx->buf) + offset;
+    if( ctx->len > DATA_INLINE_MAX )
+        return  ((uint8_t *)ctx->ptr) + offset;
+    else return ((uint8_t *)ctx->buf) + offset;
 }
 
 int s2data_unmap(T *restrict ctx)
@@ -111,6 +133,7 @@ int s2data_trunc(T *restrict ctx, size_t len)
     // it invokes already use errno to report errors.
 
     void *tmp;
+    size_t oldlen;
     
     if( ctx->mapcnt > 0 )
     {
@@ -118,13 +141,45 @@ int s2data_trunc(T *restrict ctx, size_t len)
         return -1;
     }
 
-    // [2024-03-06-nul-term]:
-    if( !(tmp = realloc(ctx->buf, len+1)) ) return -1;
-    ((uint8_t *)tmp)[len] = '\0';
+    oldlen = ctx->len;
 
-    ctx->buf = tmp;
-    ctx->len = len;
-    return 0;
+    if( oldlen > DATA_INLINE_MAX && len > DATA_INLINE_MAX )
+    {
+        // [2024-03-06-nul-term]:
+        if( !(tmp = realloc(ctx->ptr, len+1)) ) return -1;
+        ((uint8_t *)tmp)[len] = '\0';
+
+        ctx->ptr = tmp;
+        ctx->len = len;
+        return 0;
+    }
+    else if( oldlen <= DATA_INLINE_MAX && len > DATA_INLINE_MAX )
+    {
+        if( !(tmp = calloc(1, len+1)) ) return -1;
+        memcpy(tmp, ctx->buf, oldlen+1);
+        ((uint8_t *)tmp)[len] = '\0';
+
+        ctx->ptr = tmp;
+        ctx->len = len;
+        return 0;
+    }
+    else if( oldlen > DATA_INLINE_MAX && len <= DATA_INLINE_MAX )
+    {
+        tmp = ctx->ptr;
+        memcpy(ctx->buf, tmp, len);
+
+        ((uint8_t *)ctx->buf)[len] = '\0';
+        ctx->len = len;
+
+        free(tmp);
+        return 0;
+    }
+    else // if( oldlen <= DATA_INLINE_MAX && len <= DATA_INLINE_MAX )
+    {
+        ((uint8_t *)ctx->buf)[len] = '\0';
+        ctx->len = len;
+        return 0;
+    }
 }
 
 int s2data_cmp(T *restrict s1, T *restrict s2)
