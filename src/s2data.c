@@ -11,7 +11,7 @@ struct s2ctx_data {
     s2obj_t basetype;
     size_t len;
     long mapcnt;
-    union {
+    alignas(max_align_t) union {
         void *ptr;
         uint8_t buf[DATA_INLINE_MAX+1];
     };
