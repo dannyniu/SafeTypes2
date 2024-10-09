@@ -8,7 +8,7 @@
 // 2024-07-27:
 // Added type check macro.
 // Check type mask with "s2obj.h".
-#define s2_is_data(obj) ((obj->type & 0x3000) == 0x0000)
+#define s2_is_data(obj) ((((s2obj_t *)obj)->type & 0x3000) == 0x0000)
 
 #define T struct s2ctx_data
 typedef T s2data_t;

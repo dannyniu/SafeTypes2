@@ -93,7 +93,7 @@ int main(void)
     s2list_seek(x, 0, S2_LIST_SEEK_SET);
     for(i=0; i<3; i++)
     {
-        if( s2list_shift(x, (void *)&v) != s2_access_success )
+        if( s2list_shift_T(s2data_t)(x, &v) != s2_access_success )
             printf("List Shift Failed!\n"), fails ++;
 
         if( *(lp = (long *)s2data_map(v, 0, sizeof(long))) != i )
@@ -109,7 +109,7 @@ int main(void)
     s2list_seek(x, 0, S2_LIST_SEEK_END);
     for(i=10; i>7; i--)
     {
-        if( s2list_pop(x, (void *)&v) != s2_access_success )
+        if( s2list_pop_T(s2data_t)(x, &v) != s2_access_success )
             printf("List Pop Failed!\n"), fails ++;
 
         if( *(lp = (long *)s2data_map(v, 0, sizeof(long))) != i )
@@ -124,7 +124,7 @@ int main(void)
 
     s2list_seek(x, -1, S2_LIST_SEEK_END);
     
-    if( s2list_pop(x, (void *)&v) != s2_access_success )
+    if( s2list_pop_T(s2data_t)(x, &v) != s2_access_success )
         printf("List Pop Failed!\n"), fails ++;
     if( *(lp = (long *)s2data_map(v, 0, sizeof(long))) != 6 )
     {
@@ -133,7 +133,7 @@ int main(void)
     }
     s2data_unmap(v);
 
-    if( s2list_shift(x, (void *)&v) != s2_access_success )
+    if( s2list_shift_T(s2data_t)(x, &v) != s2_access_success )
         printf("List Shift Failed!\n"), fails ++;
     if( *(lp = (long *)s2data_map(v, 0, sizeof(long))) != 7 )
     {

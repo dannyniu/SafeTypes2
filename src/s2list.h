@@ -8,7 +8,7 @@
 
 // 2024-07-27:
 // Added type check macro.
-#define s2_is_list(obj) (obj->type == S2_OBJ_TYPE_LIST)
+#define s2_is_list(obj) (((s2obj_t *)obj)->type == S2_OBJ_TYPE_LIST)
 
 #define T struct s2ctx_list
 typedef T s2list_t;
@@ -45,6 +45,18 @@ int s2list_pop(T *list, s2obj_t **out);
 // Retrieves object at current cursor position.
 // Reference and kept counts're not changed.
 int s2list_get(T *list, s2obj_t **out);
+
+// Added 2024-10-09.
+#define s2list_shift_T(membertype) \
+    ((int (*)(s2list_t *, membertype **))s2list_shift)
+
+// Added 2024-10-09.
+#define s2list_pop_T(membertype) \
+    ((int (*)(s2list_t *, membertype **))s2list_pop)
+
+// Added 2024-10-09.
+#define s2list_get_T(membertype) \
+    ((int (*)(s2list_t *, membertype **))s2list_get)
 
 // 2024-03-26:
 // Necessary, yet missing. Added.

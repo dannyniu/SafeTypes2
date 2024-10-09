@@ -5,7 +5,7 @@
 
 #include "common.h"
 
-#define s2_is_ref(obj) ((obj->type == S2_OBJ_TYPE_REF)
+#define s2_is_ref(obj) (((s2obj_t *)obj)->type == S2_OBJ_TYPE_REF)
 
 #define T struct s2ctx_ref
 typedef T s2ref_t;

@@ -12,7 +12,7 @@
 
 // 2024-07-27:
 // Added type check macro.
-#define s2_is_dict(obj) (obj->type == S2_OBJ_TYPE_DICT)
+#define s2_is_dict(obj) (((s2obj_t *)obj)->type == S2_OBJ_TYPE_DICT)
 
 #define T struct s2ctx_dict
 typedef T s2dict_t;
@@ -34,6 +34,10 @@ T *s2dict_create();
 int s2dict_get(T *dict, s2data_t *key, s2obj_t **out);
 int s2dict_set(T *dict, s2data_t *key, s2obj_t *value, int semantic);
 int s2dict_unset(T *dict, s2data_t *key);
+
+// Added 2024-10-09.
+#define s2dict_get_T(membertype) \
+    ((int (*)(s2dict_t *, s2data_t *, membertype **))s2dict_get)
 
 // enumerates members in arbitrary order.
 typedef struct s2ctx_dict_iter s2dict_iter_t;

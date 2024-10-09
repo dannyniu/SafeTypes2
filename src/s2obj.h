@@ -79,6 +79,7 @@ typedef void (*s2func_final_t)(T *restrict ctx);
 // - 0x0000: plain type.
 // - 0x1000: container type.
 // - 0x2000: opaque (application-defined) type.
+// # 2024-10-09: type class may be re-specified as prefix-free codes.
 // ----
 // ---- if <plain type>:
 // - 0x0f00: plain type class mask.

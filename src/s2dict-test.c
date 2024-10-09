@@ -50,7 +50,7 @@ int main(void)
         // 2024-08-01.b:
         // This is a nested pointer, and unfortunately
         // cannot have strong type safety enforcement.
-        ret = s2dict_get(x, k, (void *)&v);
+        ret = s2dict_get_T(s2data_t)(x, k, &v);
         
         if( ret != s2_access_success )
         {
@@ -72,7 +72,7 @@ int main(void)
         snprintf(kraw, klen, "!%d", i);
         
         // 2024-08-01: see note labelled 2024-08-01.b.
-        ret = s2dict_get(x, k, (void *)&v);
+        ret = s2dict_get_T(s2data_t)(x, k, &v);
 
         if( ret != s2_access_nullval )
         {
@@ -113,7 +113,7 @@ int main(void)
         }
 
         // 2024-08-01: see note labelled 2024-08-01.b.
-        ret = s2dict_get(x, k, (void *)&v);
+        ret = s2dict_get_T(s2data_t)(x, k, &v);
         if( ret != s2_access_nullval )
         {
             fails ++;

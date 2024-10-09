@@ -84,6 +84,24 @@ Success returns are `s2_access_success` and `s2_access_nullval`.
   which are distinct from what normally would occur with container
   access and are considered exceptional.
 
+**2024-10-09 Update**
+
+To support type safety, each container getter function gets an "_T"-suffixed
+counterpart. 
+
+For example, previously, to get a member from a dict, one has to spell out 
+the cast verbosely: `s2dict_get(dict, key, (s2obj_t **)&out)`. One major 
+downside of this is that, if the type of `out` changes, type errors 
+won't be caught.
+
+The new way to get an object from a dict is:
+`s2dict_get_T(s2list_t)(dict, key, &out)`. An advantage of this approach
+is that the type of `out` is clear, and it allows for consistency check.
+
+This new change is implemented as macros in terms of older interfaces, and
+the existing code don't need to haste to migrate as both methods are valid
+and intended for general public use.
+
 ## 1.5. About Thread Safety and Garbage Collection
 
 The garbage collection mechanism is threading aware - when GC is requested,
@@ -167,17 +185,18 @@ The dictionary type `s2dict_t` is keyed by `s2data_t`, as a
 pridefully shameless practice of dogfooding. The most essential functions
 of this type are `s2dict_get`, `s2dict_set`, and `s2dict_unset`.
 
-`s2dict_get(x, key, out)` places the requested member in the `out` pointer
-to a variable of type `s2obj_t *`, and returns one of
-the `s2_access_*` value described in: "General Usage >> Accessing Container"
+The `s2dict_get_T(type)(dict, key, type **out)` generic function places
+the requested member in the `out` pointer which points to an object of 
+type `type *`, and returns one of the `s2_access_*` value described in:
+"General Usage >> Accessing Container"
 The obtained member is unretained - caller has to explicitly call
 `s2obj_retain` on it, as SafeTypes2 assume the acquisition is temporary.
 
-`s2dict_set(x, key, value, semantic)` places (or replaces if there's an
+`s2dict_set(dict, key, value, semantic)` places (or replaces if there's an
 existing value) into the  dictionary under they specified key, using the
 specified `s2_setter_*` semantic.
 
-`s2dict_unset(x, key)` unsets (a.k.a. deletes) the value at the specified
+`s2dict_unset(dict, key)` unsets (a.k.a. deletes) the value at the specified
 key. Like many existing language type systems, this differs from setting the
 key to null in that, unsetting the slot causes the getter to return indication
 that the slot has no value, where as setting it to null indicates that the
@@ -197,24 +216,26 @@ The list has a cursor, which is a non-negative integer value no greater than
 the length of the list. The list contains a pointer to the element at the
 position indicated by the cursor.
 
-The `s2list_insert(x, obj, semantic)` and `s2list_push(x, obj, semantic)`
+The `s2list_insert(list, obj, semantic)` and `s2list_push(list, obj, semantic)`
 functions  insert elements at the current cursor position. `s2list_insert`
 does not advance the cursor position, where as `s2list_push` does.
 
-The `s2list_shift(x, out)` function removes an element from the current
-cursor position without changing it, and place the removed element in
-the `out` pointer to a variable of type `s2obj_t *`, and returns one of
-the `s2_access_*` indication. Because the element is no longer in the list,
-reference count is increased (with the kept count decremented).
+The `s2list_shift_T(type)(list, type **out)` generic function 
+removes an element from the current cursor position without changing it, 
+and place the removed element in the `out` pointer to a variable of
+type `type *`, and returns one of the `s2_access_*` indication. 
+Because the element is no longer in the list, reference count is increased
+(with the kept count decremented).
 
-The `s2list_pop(x, out)` function retreats the cursor position by 1 and
-remove the element at the then cursor position and place it in the `out`
-pointer to a variable of type `s2obj_t *`. As noted in the comments for
-this function in the "s2list.h" header, the function is implemented in
-terms of `s2list_shift`, and is inefficient and redundant.
+The `s2list_pop_T(type)(list, type **out)` generic function retreats 
+the cursor position by 1 and remove the element at the then cursor position
+and place it in the `out` pointer to a variable of type `type *`. 
+As noted in the comments for this function in the "s2list.h" header, 
+the function is implemented in terms of `s2list_shift`, and is
+inefficient and redundant.
 
-The `s2list_get(x, out)` function gets the object at the current cursor position.
-The reference and kept counts're not changed.
+The `s2list_get_T(type)(list, type **out)` generic function gets the object
+at the current cursor position. The reference and kept counts're not changed.
 
 The `s2list_pos` and `s2list_len` functions reports the current cursor position
 and the length of the list respectively.
