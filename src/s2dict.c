@@ -273,6 +273,7 @@ int s2dict_set(T *dict, s2data_t *key, s2obj_t *value, int semantic)
     struct s2ctx_dict_table *U;
     struct s2ctx_dict_table *V;
     struct s2ctx_dict_member *M;
+    s2obj_t *tmp = NULL;
 
     assert( semantic == s2_setter_kept ||
             semantic == s2_setter_gave );
@@ -376,7 +377,7 @@ int s2dict_set(T *dict, s2data_t *key, s2obj_t *value, int semantic)
     assert(M);
 
     if( M->flags == s2_dict_member_set )
-        s2obj_leave(M->value);
+        tmp = M->value;
 
     M->flags = s2_dict_member_set;
     M->collection = dict;
@@ -403,6 +404,8 @@ int s2dict_set(T *dict, s2data_t *key, s2obj_t *value, int semantic)
         s2obj_release(value);
         break;
     }
+
+    if( tmp ) s2obj_leave(tmp);
 
     return s2_access_success;
 }

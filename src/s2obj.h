@@ -76,10 +76,10 @@ typedef void (*s2func_final_t)(T *restrict ctx);
 
 // Rules of composition:
 // - 0x3000: container/plain/opaque type class flag mask.
-// - 0x0000: plain type.
-// - 0x1000: container type.
-// - 0x2000: opaque (application-defined) type.
-// # 2024-10-09: type class may be re-specified as prefix-free codes.
+// - 0x0xxx: plain type.
+// - 0x10xx: container type.
+// - 0x2xxx: opaque (application-defined) type.
+// # 2024-11-05: type class had been re-specified as prefix-free codes.
 // ----
 // ---- if <plain type>:
 // - 0x0f00: plain type class mask.
