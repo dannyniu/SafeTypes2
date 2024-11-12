@@ -10,11 +10,10 @@
 struct s2ctx_data {
     s2obj_t basetype;
     size_t len;
-    long mapcnt;
-    alignas(max_align_t) union {
-        void *ptr;
-        uint8_t buf[DATA_INLINE_MAX+1];
-    };
+    void *ptr;
+    unsigned long mapcnt;
+    unsigned long pushed;
+    alignas(max_align_t) uint8_t buf[DATA_INLINE_MAX+1];
 };
 
 static void s2data_final(T *restrict ctx)
@@ -65,6 +64,7 @@ T *s2data_create(size_t len)
 
     ret->len = len;
     ret->mapcnt = 0;
+    ret->pushed = len <= DATA_INLINE_MAX ? len : 0;
     return ret;
 }
 
@@ -94,10 +94,10 @@ void *s2data_map(T *restrict ctx, size_t offset, size_t len)
 
     ctx->mapcnt++;
     assert( ctx->mapcnt > 0 );
-    
-    // <s>[2024-03-06-nul-term]</s>
+
+    // [2024-03-06-nul-term]
     //
-    // 2024-03-09:
+    // <s>2024-03-09</s>:
     // ----
     //
     // Concurrent writes are one of the best known undefined race condition
@@ -109,9 +109,20 @@ void *s2data_map(T *restrict ctx, size_t offset, size_t len)
     // measure in case some application wrote it with some other value.
     // Considering however, client codes that relied on this behavior is
     // already faulty, SafeTypes2 developer(s) has therefore decided
-    // that there's no point trading a threading UD for a memory UD.
+    // that there's no point trading a threading UB for a memory UB.
     //
-    //- ((uint8_t *)ctx->buf)[ctx->len] = '\0';
+    // 2024-11-12:
+    // ----
+    //
+    // It was realized that, this function can only be called in 1 thread at
+    // a time, as it modifies the map count. The so called threading UB from
+    // the previous note really should've been prevented by use of
+    // synchronization primitives on the calling code's side. As such, the
+    // following line of code is re-introduced.
+    //
+    if( ctx->len <= DATA_INLINE_MAX )
+        ((uint8_t *)ctx->buf)[ctx->len] = '\0';
+    else ((uint8_t *)ctx->ptr)[ctx->len] = '\0';
 
     if( ctx->len > DATA_INLINE_MAX )
         return  ((uint8_t *)ctx->ptr) + offset;
@@ -169,7 +180,8 @@ int s2data_trunc(T *restrict ctx, size_t len)
         memcpy(ctx->buf, tmp, len);
 
         ((uint8_t *)ctx->buf)[len] = '\0';
-        ctx->len = len;
+        ctx->len = ctx->pushed = len;
+        ctx->ptr = NULL;
 
         free(tmp);
         return 0;
@@ -177,7 +189,8 @@ int s2data_trunc(T *restrict ctx, size_t len)
     else // if( oldlen <= DATA_INLINE_MAX && len <= DATA_INLINE_MAX )
     {
         ((uint8_t *)ctx->buf)[len] = '\0';
-        ctx->len = len;
+        ctx->len = ctx->pushed = len;
+        ctx->ptr = NULL;
         return 0;
     }
 }
@@ -197,4 +210,61 @@ int s2data_cmp(T *restrict s1, T *restrict s2)
         return len1 < len2 ? -1 : len1 == len2 ? 0 : 1;
     }
     else return ret;
+}
+
+int s2data_putc(T *restrict ctx, int c)
+{
+    assert( ctx->pushed <= DATA_INLINE_MAX );
+
+    if( ctx->pushed == DATA_INLINE_MAX )
+    {
+        size_t oldlen = ctx->len, newlen;
+
+        if( ctx->len == ctx->pushed )
+        {
+            newlen = ctx->len + 1;
+
+            if( s2data_trunc(ctx, newlen) == -1 ) return -1;
+            ((uint8_t *)ctx->ptr)[oldlen] = c;
+
+            ctx->pushed = 0;
+            return 0;
+        }
+        else
+        {
+            assert(  ctx->len > ctx->pushed );
+            newlen = ctx->len + ctx->pushed;
+
+            if( s2data_trunc(ctx, newlen) == -1 ) return -1;
+            memcpy(oldlen + (uint8_t *)ctx->ptr, ctx->buf, ctx->pushed);
+            ctx->pushed = 0;
+        }
+    }
+
+    ctx->buf[ctx->pushed++] = c;
+    if( ctx->len < DATA_INLINE_MAX ) ctx->len++;
+
+    return 0;
+}
+
+int s2data_putfin(T *restrict ctx)
+{
+    size_t oldlen, newlen;
+
+    if( ctx->len <= DATA_INLINE_MAX )
+    {
+        assert( ctx->pushed == ctx->len );
+        return 0;
+    }
+
+    if( ctx->pushed == 0 ) return 0;
+
+    oldlen = ctx->len;
+    newlen = oldlen + ctx->pushed;
+    if( s2data_trunc(ctx, newlen) == -1 ) return -1;
+
+    memcpy(oldlen + (uint8_t *)ctx->ptr, ctx->buf, ctx->pushed);
+
+    ctx->pushed = 0;
+    return 0;
 }

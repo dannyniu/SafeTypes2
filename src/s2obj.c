@@ -33,7 +33,7 @@ struct gc_anchor_ctx
     // When GC is in-progress, ``lck_master'' shall be
     // held by the GC thread. Where as when the GC is
     // pending, the GC thread may be blocked waiting
-    // for ``cv_gc''.
+    // for ``cv_gc_enter''.
     bool gc_inprogress;
 
     // 0: initial state.

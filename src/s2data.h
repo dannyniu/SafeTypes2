@@ -3,7 +3,7 @@
 #ifndef SafeTypes2_Data_H
 #define SafeTypes2_Data_H
 
-#include "common.h"
+#include "s2obj.h"
 
 // 2024-07-27:
 // Added type check macro.
@@ -52,6 +52,10 @@ int s2data_trunc(T *restrict ctx, size_t len);
 
 // 2024-02-25: This is a new interface in SafeTypes2.
 int s2data_cmp(T *restrict s1, T *restrict s2);
+
+// Added 2024-11-12.
+int s2data_putc(T *restrict ctx, int c);
+int s2data_putfin(T *restrict ctx);
 
 #ifndef safetypes2_implementing_data
 #undef T

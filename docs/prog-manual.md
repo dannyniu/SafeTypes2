@@ -179,6 +179,22 @@ to know the exact ranges mapped, only a total is required.
 `s2data_trunc(x, len)` takes a length parameter, checks no one is currently
 mapping any range of the buffer, and resize it.
 
+From real-world experience, it's discovered that adding bytes 1-by-1 is a
+frequent task. Before 2024-11-12, this functionality is achieved by calling
+code in ad-hoc ways. However, since there's now an inline buffer, growing
+the data buffer 1 byte at a time is now possible in an efficient way. Small
+amounts can be handled entirely by the inline buffer; where as larger ones
+can first accumulate in the (reused) inline buffer, and calling `realloc(3)`
+less frequently 1 chunk at a time.
+
+The `s2data_putc(x, c)` function put 1 byte (with the value of `c`) onto the
+end of `x`. For efficiency reasons, this byte may not necessarily be visible
+right away; if all bytes have been provided, `s2data_putfin()` can be called
+to indicate that no more data is pending.
+
+The `s2data_putfin(x)` flushes any accumulated data so that they're guaranteed
+to be visible at the next access operation (i.e. trunc, map, etc.)
+
 ## 2.3. `s2dict_t`
 
 The dictionary type `s2dict_t` is keyed by `s2data_t`, as a
@@ -210,7 +226,7 @@ the direction of design decision lean towards more primitive operations that
 can readily compose into useful sequential operations.
 
 To this end, 4 functions are provided to insert and remove items from the list
-(with 1 being dis-recommended), and 2 providing helper functionalities.
+(with 1 being dis-recommended). A few others provide helper functionalities.
 
 The list has a cursor, which is a non-negative integer value no greater than
 the length of the list. The list contains a pointer to the element at the
@@ -255,6 +271,10 @@ The `cmpfunc` shall be compatible with the prototype:
 `int (*)(s2obj_t *a, s2obj_t *b);`. It shall return less than 0 if a is
 ordered before b, and greater than 0 if ordered after, and 0 if a and b
 are equivalent in order.
+
+The `s2data_cmp` function is one such that is compatible with the prototype.
+It compares 2 data string byte-wise similar to `memcmp`, except when the
+shorter one is the prefix of the longer one, the shorter one is ordered before.
 
 ## 2.5. `s2ref_t`
 
