@@ -21,7 +21,7 @@
 #if INTERCEPT_MEM_CALLS
 extern uint8_t shk[16];
 extern uint32_t mh[4];
-extern int allocs, frees;
+extern long allocs, frees;
 void *mem_intercept(void *);
 #define calloc(...) mem_intercept((allocs++, calloc(__VA_ARGS__)))
 #define free(...) free((frees++, mem_intercept(__VA_ARGS__)))

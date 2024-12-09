@@ -137,6 +137,7 @@ type-checking macros are added:
 - `s2_is_data(obj)`
 - `s2_is_dict(obj)`
 - `s2_is_list(obj)`
+- `s2_is_ref(obj)`
 
 When objects of other concrete data types are passed to parameters or assigned
 to variables of `s2obj_t *`, one can write `&obj->base` to let compiler enforce
@@ -416,4 +417,4 @@ objects.
 
 The SafeTypes2 library is free and open-source software place in the
 Public Domain by DannyNiu/NJF. Refer to header files for function prototypes,
-and source code for detailed implementation information
+and source code for detailed implementation information.

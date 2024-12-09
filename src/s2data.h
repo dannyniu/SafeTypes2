@@ -31,7 +31,7 @@ size_t s2data_len(T *restrict ctx);
 // keeps a number, which is checked by ``*_trunc''.
 //
 // [2024-03-06-nul-term]:
-// In the version suchly tagged, it is safe to pass the entire
+// In the version suchly labelled, it is safe to pass the entire
 // mapped pointer to functions that expect nul-terminated strings,
 // as the implementation internally adds an extra nul byte
 // just one byte beyond the effective length of the buffer.

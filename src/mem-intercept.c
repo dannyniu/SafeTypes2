@@ -6,8 +6,8 @@
 uint8_t shk[16] = {0};
 uint32_t mh[4] = {0};
 
-int allocs = 0;
-int frees = 0;
+long allocs = 0;
+long frees = 0;
 
 void *mem_intercept(void *a)
 {

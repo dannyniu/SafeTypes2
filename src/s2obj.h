@@ -5,19 +5,11 @@
 
 #include "common.h"
 
-#if defined(safetypes2_implementing_data) ||                            \
-    defined(safetypes2_implementing_dict) ||                            \
-    defined(safetypes2_implementing_list) ||                            \
-    defined(safetypes2_implementing_ref)  ||                            \
-    defined(safetypes2_implementing_misc) // for user-defined types.
-#define safetype2_included_internally
-#endif /* !defined(safetype2_implementing_{data,dict,list}) */       
-
-// In SafeTypes2, type definitions are always incomplete for those that're
-// externally exposed - to create objects, size-determined memory are allocated
-// and assigned to pointers. Most types are derived from "base types",
-// the base types provide what's known as "interfaces/protocols/traits"
-// in some other languages. The "object" type is one such base type.
+// The "object" type (denoted by ``s2obj_t'') is the base type for all
+// externally-exposed types except a few (e.g. ``s2iter_t''). It defines
+// common interface for derived types. All derived types defined by SafeTypes2
+// are incomplete (C language concept), and are meant to be used from
+// pointer handles.
 //
 // The internal data structures have tag names prefixed with "s2ctx_", whereas
 // externally visible ones are defined as types and not prefixed as such.
@@ -170,8 +162,8 @@ T {
 };
 
 // 2024-02-25:
-// This could've been called ``s2obj_create''.
-// Such naming signifies it's a internal interface.
+// This could've been called ``s2obj_create'', however
+// the existing naming signifies it's a internal interface.
 T *s2gc_obj_alloc(s2obj_typeid_t type, size_t sz);
 void s2gc_obj_dealloc(T *restrict obj);
 
@@ -203,18 +195,6 @@ int s2gc_thrd_lock();
 
 // To release the "reader" lock from a application thread.
 int s2gc_thrd_unlock();
-
-// 2024-02-21:
-// Objects should only be finalized when their counts reach 0 or got collected,
-// and should not be finalized by explicit request. ``s2_final_func_t'' is
-// called by object finalizer before the object is freed
-//
-// The following are historical and no longer relevant:
-//# Called by "sub-classes". It's not intended for users.
-//- void s2_obj_final_super(T *restrict obj);
-//# This function is intended for users.
-//# It calls ``finalf'', which in turn calls ``*_final_super''.
-//- void s2_obj_final(T *restrict obj);
 
 #ifndef safetypes2_implementing_obj
 #undef T

@@ -212,9 +212,9 @@ int main()
     for(iters = 1; iters <= 50; iters++)
     {
         eprintf("%d-th test.\n", iters);
-        eprintf("guard: -d, pending: %zd, "
+        eprintf("guard: %d, pending: %zd, "
                 "wenter: %zd, wleave: %zd, tcnt: %zd.\n",
-                //- gc_anch.gc_guarding_state,
+                gc_anch.stateguard,
                 gc_anch.gc_pending,
                 gc_anch.gc_waiting_enter,
                 gc_anch.gc_waiting_leave,
@@ -306,9 +306,9 @@ int main()
         pthread_join(t4, NULL);
         pthread_join(t5, NULL);
         eprintf("case-06 passed.\n");
-        eprintf("guard: -d, pending: %zd, "
+        eprintf("guard: %d, pending: %zd, "
                 "wenter: %zd, wleave: %zd, tcnt: %zd.\n",
-                //- gc_anch.gc_guarding_state,
+                gc_anch.stateguard,
                 gc_anch.gc_pending,
                 gc_anch.gc_waiting_enter,
                 gc_anch.gc_waiting_leave,
