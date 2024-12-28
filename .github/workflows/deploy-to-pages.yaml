@@ -7,6 +7,10 @@ on:
 
 jobs:
   Docs-Gen-Pages-Deploy:
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt-get install doxygen
@@ -17,7 +21,7 @@ jobs:
       - run: |
           cd ${{ github.workspace }}
           doxygen
-          cp auto/SafeTypes2-Docs docs/.
+          cp -R auto/SafeTypes2-Docs docs/.
       - name: step 2/3 artifact upload
         uses: actions/upload-pages-artifact@v3
         with:
