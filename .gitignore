@@ -50,3 +50,6 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Added 2024-12-27 by @dannyniu
+doxygen-generated

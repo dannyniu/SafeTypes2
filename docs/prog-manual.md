@@ -1,3 +1,13 @@
+**NOTE 2024-12-28**
+===================
+
+This document is obsoleted in favor of in-header Doxygen markups and
+generated page files. It is retained for 1. historical significance,
+and 2. any future modifications and improvements to the code remain
+backwards compatible when referring to the specifications in this file.
+
+Below is the original content of this document.
+
 API Document
 ============
 

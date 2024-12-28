@@ -9,18 +9,6 @@
 #error If Pthread isn't available, adapt the code accordingly.
 #endif /* !__has_include(<pthread.h>) */
 
-// The SafeTypes2 GC is threading-aware with the help of a
-// **reader-writer lock**. In multi-threaded applications, threads obtain
-// "reader" locks to prevent GC from operating on data structures that
-// the threads may be using. When GC operates, the "writer" lock is locked,
-// and all threads are stalled and prevented from operating on objects
-// so that GC can safely traverse the graph of reachable objects,
-// marking them and releasing unreachable objects as needed.
-//
-// This mechanism applies to the GC, and not the rest of the application -
-// threads still need to prevent threading conflict using explicit
-// synchronization.
-
 struct gc_anchor_ctx
 {
     pthread_mutex_t lck_master;
@@ -30,10 +18,10 @@ struct gc_anchor_ctx
     // when there's only 1 thread running.
     bool threaded;
 
-    // When GC is in-progress, ``lck_master'' shall be
+    // When GC is in-progress, `lck_master` shall be
     // held by the GC thread. Where as when the GC is
     // pending, the GC thread may be blocked waiting
-    // for ``cv_gc_enter''.
+    // for `cv_gc_enter`.
     bool gc_inprogress;
 
     // 0: initial state.
@@ -41,7 +29,7 @@ struct gc_anchor_ctx
     // 2: gcop unlocking.
     short stateguard;
 
-    // Total GC calls made externally from the ``thr_count'' threads.
+    // Total GC calls made externally from the `thr_count` threads.
     size_t gc_pending;
 
     // Total threads acquiring GC "writer" lock.
@@ -78,8 +66,8 @@ static struct gc_anchor_ctx gc_anch = {
 
 // This allows making "reader" lock recursive. The other way of making
 // the "reader" lock recursive would make it impossible to make explicit
-// GC call - namely, if the recursion counts are counted on ``thr_count'',
-// then there will be no way to compare it with ``gc_waiting_enter''.
+// GC call - namely, if the recursion counts are counted on `thr_count`,
+// then there will be no way to compare it with `gc_waiting_enter`.
 static pthread_key_t thrd_recursion_counter;
 static bool thrd_recursion_counter_initialized = false;
 
@@ -220,13 +208,13 @@ void s2obj_leave(T *restrict obj)
         if( gc_anch.gc_inprogress )
             obj->guard = 1;
 
-        // 2024-02-21: see note in ``*_release''.
+        // 2024-02-21: see note in `s2obj_release`.
         if( obj->finalf ) // 2024-08-15: weak reference support
             obj->finalf(obj);
 
         if( gc_anch.gc_inprogress )
         {
-            // 2024-02-27: see note in ``*_release''.
+            // 2024-02-27: see note in `s2obj_release`.
             obj->mark = mark_last|1;
         }
         else s2gc_obj_dealloc(obj);
@@ -246,7 +234,7 @@ static void s2gc_thrd_recursion_initializer()
     if( !thrd_recursion_counter_initialized )
     {
         // This must only be done (only once) while
-        // ``lck_master'' is held by the one thread.
+        // `lck_master` is held by the one thread.
         e = pthread_key_create(&thrd_recursion_counter, NULL);
         assert( e == 0 ); // 2024-02-24: cannot recover from this error.
         thrd_recursion_counter_initialized = true;
@@ -340,7 +328,7 @@ int s2gc_thrd_unlock()
 
     // Anomaly enumeration:
     //
-    // - ``gc_inprogress'' is true: (enumerated 2024-02-24.)
+    // - `gc_inprogress` is true: (enumerated 2024-02-24.)
     //   GC is supposed to be only operating before or after
     //   this function, never during it runs.
     //
@@ -482,7 +470,7 @@ static int s2gc_gcop_unlock(long id)
     if( !gc_anch.threaded )
     {
         // 2024-08-28:
-        // See note in ``s2gc_gcop_lock'' dated today.x
+        // See note in `s2gc_gcop_lock` dated today.x
         gc_anch.gc_inprogress = false;
 
         // The application is single-threaded, no need to lock.
@@ -521,7 +509,7 @@ static int s2gc_gcop_unlock(long id)
         // ---------------
         // We need to stall all the threads that requested GC
         // until the GC is complete, otherwise, the atomicity
-        // invariant of ``*_gcop_{,un}lock'' will be violated.
+        // invariant of `*_gcop_{,un}lock` will be violated.
 
         e = pthread_cond_wait(&gc_anch.cv_gc_leave, &gc_anch.lck_master);
         assert( e == 0 ); // 2024-02-24: caller can't recover from this error.
@@ -535,7 +523,7 @@ static int s2gc_gcop_unlock(long id)
         gc_anch.gc_inprogress = false;
 
         // 2024-06-30:
-        // was consulting ``threc''. now arbitriating.
+        // was consulting `threc`. now arbitriating.
         gc_anch.gc_pending = 0;
 
         // 2024-06-03:

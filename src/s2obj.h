@@ -3,98 +3,135 @@
 #ifndef SafeTypes2_obj_ctx_h
 #define SafeTypes2_obj_ctx_h 1
 
+/// @file
+/// @brief
+/// The object base type and auxiliary definitions for all of SafeTypes2.
+
 #include "common.h"
 
-// The "object" type (denoted by ``s2obj_t'') is the base type for all
-// externally-exposed types except a few (e.g. ``s2iter_t''). It defines
-// common interface for derived types. All derived types defined by SafeTypes2
-// are incomplete (C language concept), and are meant to be used from
-// pointer handles.
-//
-// The internal data structures have tag names prefixed with "s2ctx_", whereas
-// externally visible ones are defined as types and not prefixed as such.
+/// @page objsys Object System
+/// @section type-hier Type Hierarchy
+/// The "object" type (denoted by `s2obj_t`) is the base type for all
+/// externally-exposed types except a few (e.g. `s2iter_t`). It defines
+/// common interface for derived types. All derived types defined by
+/// SafeTypes2 are incomplete (C language concept), and are meant to be
+/// used from pointer handles.
+///
+/// The internal data structures have tag names prefixed with "s2ctx_",
+/// whereas externally visible ones are defined as types and
+/// not prefixed as such.
+
+/// @typedef s2obj_t
+/// @brief the working context for the base object type `s2obj_t`.
+/// In the following prose, `s2obj_t` will be abbreviated as `T`.
 #define T struct s2ctx_obj
 typedef T s2obj_t;
 
-// The incomplete base type of various iterators.
+/// @typedef s2iter_t
+/// @brief
+/// The base type of various iterators.
 typedef struct s2ctx_iter s2iter_t;
 
-// The iterator stepping function. Returns:
-// * 1 on success,
-// * 0 at the end,
-// * -1 on error.
-//
-// Iterator creator functions doen't set the position, a initial call
-// to step function is needed to initialize the position of the iterator.
+/// @typedef s2iter_stepfunc_t
+/// @brief The iterator stepping function.
+/// @param ctx the pointer handle to the iterator.
+/// @returns 1 on success, 0 at the end, and -1 on error.
+///
+/// @details
+/// Iterator creator functions doen't set the position, a initial call
+/// to step function is needed to initialize the position of the iterator.
 typedef int (*s2iter_stepfunc_t)(s2iter_t *restrict ctx);
 
-// frees up resources used by the iterator.
+/// @typedef s2iter_final_func_t
+/// @brief frees up resources used by the iterator.
+/// @param ctx the pointer handle to the iterator
 typedef void (*s2iter_final_func_t)(s2iter_t *restrict ctx);
 
-// Publically visible members of the iterator base type structure.
+/// @struct s2ctx_iter
+/// @brief
+/// The `struct s2ctx_iter` defines publically visible members
+/// of the iterator base type structure.
 struct s2ctx_iter
 {
-    s2iter_final_func_t final;
+    /// @brief slot for the finalizer subroutine.
+    s2iter_final_func_t final; 
 
     // Iterators that're container enumerators live in a time range
     // that're sub-ranges of their respective containers. This is
     // usually ensured by having the iterators operate in the same
     // thread as their respective containers, and protected by the
     // same "cluster" mutex.
+    /// @brief the iterator stepping function.
     s2iter_stepfunc_t next;
 
-    // For ``s2list_t'', key is interpreted as ``intptr_t key'',
-    // for ``s2dict_t'', key is interpreted as ``s2data_t *key''.
-    // If key is an object, it's an unretained reference to the
-    // internal structure member, so it shouldn't be modified or
-    // have its reference or kept count changed.
-    //
     // 2024-07-27:
     // The following 2 was mistakenly restrict-qualified. Now corrected.
     //
+    /// @brief the key for the current value.
+    /// @details
+    /// This is `intptr_t` for `s2list_t` and `s2data_t *` for `s2dict_t`.
+    /// When the key is an object, it's an unretained reference to the
+    /// internal structure member, so it shouldn't be modified or
+    /// have its reference or kept count changed.
     void *key;
+
+    /// @brief
+    /// the slot holding the value object at the current iterator position.
     T *value;
 };
 
-// Returns non-NULL on success and NULL on failure.
-// This is a change from the original version - instead of keeping
-// iterator state on the object, separate iterator context is used
-// so that 1 (read-only) object may have different iterator positions.
+/// @typedef s2func_iter_create_t
+/// @returns non-NULL on success and NULL on failure.
+///
+/// @note
+/// This is a change from the original SafeTypes library - instead of keeping
+/// iterator state on the object, separate iterator context is used
+/// so that 1 (read-only) object may have different iterator positions.
 typedef s2iter_t *(*s2func_iter_create_t)(T *restrict ctx);
 
-// When both the reference and the kept count of an object is zero, its
-// finalization routine is invoked and object is freed.
+/// @typedef s2func_final_t
+/// @brief subroutine type for the finalizer slot.
+/// @param ctx the handle pointer to the object to finalize.
+///
+/// @details
+/// When both the reference and the kept count of an object is zero, its
+/// finalization routine is invoked and object is freed.
 typedef void (*s2func_final_t)(T *restrict ctx);
 
-// Rules of composition:
-// - 0x3000: container/plain/opaque type class flag mask.
-// - 0x0xxx: plain type.
-// - 0x10xx: container type.
-// - 0x2xxx: opaque (application-defined) type.
-// # 2024-11-05: type class had been re-specified as prefix-free codes.
-// ----
-// ---- if <plain type>:
-// - 0x0f00: plain type class mask.
-// - 0x0000: string/blob/misc.
-// - 0x0100: integer type.
-// - 0x0200: floating point type.
-// - 0x0300: array type.
-// ----
-// ---- if <integer type> or <floating point type>:
-// - 0x00c0: endianness mask - not applicable to strings and blobs.
-// - 0x0000: host endianness.
-// - 0x0040: little-endian.
-// - 0x0080: big-endian.
-// - 0x003f: plain type width mask.
-// ----
-// ---- if <array type>:
-// - 0x00ff: array element length mask.
-// ----
-// ---- pre-defined values:
-// - 0x0000: exact value for the null type.
-// - 0x0001: exact value for the raw data type.
-// - 0x0002: exact value for utf-8 string type.
-// - 0x0003: exact value for 8-bit data type.
+/// @typedef s2obj_typeid_t
+typedef uint16_t s2obj_typeid_t;
+
+/// @page objsys Object System
+/// @section type-ids Type Identifier Name Space.
+/// Rules of composition:
+/// - 0x3000: container/plain/opaque type class flag mask.
+/// - 0x0xxx: plain type.
+/// - 0x10xx: container type.
+/// - 0x2xxx: opaque (application-defined) type.
+/// @note 2024-11-05: type class had been re-specified as prefix-free codes.
+///
+/// - if <plain type>:
+///   - 0x0f00: plain type class mask.
+///   - 0x0000: string/blob/misc.
+///   - 0x0100: integer type.
+///   - 0x0200: floating point type.
+///   - 0x0300: array type.
+///
+/// - if <integer type> or <floating point type>:
+///   - 0x00c0: endianness mask - not applicable to strings and blobs.
+///   - 0x0000: host endianness.
+///   - 0x0040: little-endian.
+///   - 0x0080: big-endian.
+///   - 0x003f: plain type width mask.
+///
+/// - if <array type>:
+///   - 0x00ff: array element length mask.
+///
+/// - pre-defined values:
+///   - 0x0000: exact value for the null type.
+///   - 0x0001: exact value for the raw data type.
+///   - 0x0002: exact value for utf-8 string type.
+///   - 0x0003: exact value for 8-bit data type.
 #define S2_OBJ_TYPE_NULL        0x0000
 
 // No linter enforces the correctness of coding, they're only different in
@@ -118,8 +155,6 @@ typedef void (*s2func_final_t)(T *restrict ctx);
 #define S2_OBJ_TYPE_DICT        0x1001
 #define S2_OBJ_TYPE_LIST        0x1002
 #define S2_OBJ_TYPE_REF         0x1003
-
-typedef uint16_t s2obj_typeid_t;
 
 T {
     // used by GC.
@@ -161,39 +196,102 @@ T {
     // expecting generic base objects.
 };
 
+/// @page objsys Object System
+/// @section mem-gc Resource Management and Garbage Collection.
+/// The SafeTypes2 GC is threading-aware with the help of a
+/// **reader-writer lock**. In multi-threaded applications, threads obtain
+/// "reader" locks to prevent GC from operating on data structures that
+/// the threads may be using. When GC operates, the "writer" lock is locked,
+/// and all threads are stalled and prevented from operating on objects
+/// so that GC can safely traverse the graph of reachable objects,
+/// marking them and releasing unreachable objects as needed.
+///
+/// The "reader" lock is recursive - threads can invoke codes from 3rd-party
+/// libraries and not worry they interfere with the calling code;
+/// The "reader" lock is also "rewindable" - if while a "reader" lock is held
+/// by the calling thread, an acquire of the "writer" lock (implicitly invoked
+/// as part of `s2gc_collect`) automatically clears up whilest remembering
+/// the "reader" lock.
+///
+/// As such, when all involved threads requests "writer" lock,
+/// the GC would eventually operate, regardless of
+/// - which threads first requested GC,
+/// - how many threads are holding the "reader" lock,
+/// - how many level of recursion the "reader" locks are in,
+///
+/// As long as all threads that had held any "reader" lock
+/// eventually calls `s2gc_collect`.
+///
+/// This mechanism applies to the GC, and not the rest of the application -
+/// threads still need to prevent threading conflict using explicit
+/// synchronization.
+
+
 // 2024-02-25:
-// This could've been called ``s2obj_create'', however
+// This could've been called `s2obj_create`, however
 // the existing naming signifies it's a internal interface.
+//
+/// @fn
+/// @brief Allocates memory for an object. Invoked by type implementations.
+/// @param type the type id for the object, see @ref type-ids
+/// @returns the pointer handle to the object.
 T *s2gc_obj_alloc(s2obj_typeid_t type, size_t sz);
+
+/// @fn
+/// @brief Deallocates memory for the object. Invoked by type implementations.
+/// @param obj the object to deallocate.
+/// @details additional resources are released by finalizer.
 void s2gc_obj_dealloc(T *restrict obj);
 
-// 2024-03-09:
-// It is assumed that this will only be called when
-// there's only 1 thread. By default, threading is
-// enabled for GC, and this function is provided for
-// single-threaded applications to avoid costs associated
-// with synchronization.
+/// @fn
+/// @brief enable or disable threading support in garbage collector.
+/// @param enabled `true` to enable threading, and `false` to disable it.
+///
+/// @details
+/// 2024-03-09: It is assumed that this will only be called when
+/// there's only 1 thread. By default, threading is enabled for GC,
+/// and this function is provided for single-threaded applications
+/// to avoid synchronization overheads.
 void s2gc_set_threading(bool enabled);
 
-// Explicit invocation of SafeTypes2 garbage collection.
-// Only needed if there's "reference cycle".
+/// @fn
+/// @brief
+/// Explicitly invoke SafeTypes2 garbage collection.
+/// Applications that never creates reference cycles don't need this.
 void s2gc_collect(void);
 
-// Returns ``obj''.
-T *s2obj_retain(T *restrict obj); // ``++refcnt''.
-T *s2obj_keep(T *restrict obj); // ``++keptcnt''.
+/// @fn
+/// @brief Increases reference count. Invoked by the application.
+/// @returns obj
+T *s2obj_retain(T *restrict obj);
 
-void s2obj_release(T *restrict obj); // ``--refcnt''.
-void s2obj_leave(T *restrict obj); // ``--keptcnt''.
+/// @fn
+/// @brief Increases 'kept' count. Invoked by container implementations.
+/// @returns obj
+T *s2obj_keep(T *restrict obj);
 
-// creates an iterator by invoking the internal ``itercreatf''.
+/// @fn
+/// @brief Decreases reference count. Invoked by the application.
+void s2obj_release(T *restrict obj);
+
+/// @fn
+/// @brief Decreases 'kept' count. Invoked by container implementations.
+void s2obj_leave(T *restrict obj);
+
+/// @fn
+/// @brief creates an iterator by invoking the internal `itercreatf`.
+/// @param obj the object of which the iterator is created.
+/// @return the iterator object, or NULL on failure.
 s2iter_t *s2obj_iter_create(T *restrict obj);
 
-// To obtain a "reader" lock for the application thread.
-// "thrd" is a fortunate portmanteau of "thread-reading".
+/// @fn
+/// @brief
+/// To obtain a "reader" lock for the application thread.
+/// ("thrd" is a fortunate portmanteau of "thread-reading".)
 int s2gc_thrd_lock();
 
-// To release the "reader" lock from a application thread.
+/// @fn
+/// @brief To release the "reader" lock from a application thread.
 int s2gc_thrd_unlock();
 
 #ifndef safetypes2_implementing_obj

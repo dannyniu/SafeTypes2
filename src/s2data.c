@@ -87,7 +87,7 @@ size_t s2data_len(T *restrict ctx)
 void *s2data_map(T *restrict ctx, size_t offset, size_t len)
 {
     // 2024-03-26:
-    // The first check *was*: ``offset >= ctx->len''.
+    // The first check *was*: `offset >= ctx->len`.
     // This caused a bit of surprise for codes in the real world.
     if( offset       > ctx->len ) return NULL;
     if( offset + len > ctx->len ) return NULL;

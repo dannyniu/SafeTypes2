@@ -1,0 +1,26 @@
+name: Generate and deploy documents to Pages
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  Docs-Gen-Pages-Deploy:
+    runs-on ubuntu-latest
+    steps:
+      - run: apt-get install doxygen
+      - name: step 0/3 checkout
+        uses: actions/checkout@v4
+      - name: step 1/3 configure
+        uses: actions/configure-pages@v5
+      - run: |
+          cd ${{ github.workspace }}
+          doxygen
+          cp auto/SafeTypes2-Docs docs/.
+      - name: step 2/3 artifact upload
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/
+      - name step 3/3 deploy
+        uses actions/deploy-pages@v4

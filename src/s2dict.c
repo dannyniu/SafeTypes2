@@ -298,14 +298,14 @@ int s2dict_set(T *dict, s2data_t *key, s2obj_t *value, int semantic)
                 goto replace_value_prepare;
 
             // hash collision. do the following:
-            // 1. increment ``level''.
+            // 1. increment `level`.
             // 2. calculate h2 from the key of M if it hasn't been done.
             // 3. create subtable U.
             // 4. move M to U.
             // 5. attach U to V.
             // 6. test for collision:
             // 6.1. if collision, restart with U as V.
-            // 6.2. otherwise, add ``value'' to U, and done.
+            // 6.2. otherwise, add `value` to U, and done.
 
             U = NULL;
 
@@ -442,7 +442,7 @@ dive_in:
         {
             iter->iterlevel = level;
             iter->iterpos[level] ++;
-            goto descend_in; // simple method of seeking for ``V''.
+            goto descend_in; // simple method of seeking for `V`.
         }
     }
 

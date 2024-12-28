@@ -79,7 +79,7 @@ void SipHash_c2_Update(
     
     while( len )
     {
-        x->m ^= // might as well be ``|='' or ``+=''.
+        x->m ^= // might as well be `|=` or `+=`.
             (uint64_t)*ptr++ << ((x->l & 7) << 3);
 
         ++ x->l;

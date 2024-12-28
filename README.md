@@ -1,6 +1,8 @@
 SafeTypes2
 ==========
 
+SafeTypes2 - an evolution of the original SafeTypes object system library.
+
 Introduction
 ------------
 

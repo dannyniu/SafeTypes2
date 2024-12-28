@@ -192,16 +192,12 @@ int s2list_shift(T *list, s2obj_t **out)
     M = list->cursor;
     *out = M->value;
 
-    // 2023-07-27:
-    // It was previously noted that, due to efficiency reasons,
-    // garbage collecting calls was not used in container setters and getters.
-    // Considering the possibility of edge cases where the "gave" semantic
-    // may cause the undesired behavior of reference and kept counts to
-    // drop to 0 without invoking the garbage collector, that note has been
-    // obsoleted and removed.
-    // However, when there's guarantee that reference count will be non-zero
-    // after the operation, an exception is established for it for the same
-    // efficiency reason and purpose.
+    // 2024-12-27:
+    // In a revision of the original SafeTypes that had not been covered under
+    // version control, there was a note tagged [2023-07-17-cnt-op] that was
+    // refuted by a note dated 2023-07-27. This version was never published,
+    // and the 2023-07-27 note applied to the older GC in the original
+    // SafeTypes library - it is irrelevant in SafeTypes2.
     ++ (*out)->refcnt;
     -- (*out)->keptcnt;
 
@@ -363,7 +359,7 @@ T *s2list_sort(T *list, s2func_sort_cmp_t cmpfunc)
     {
         for(o=list->anch_head.next; o->next; o=o->next)
         {
-            // using the ``<='' operator to preserve the relative order
+            // using the `<=` operator to preserve the relative order
             // of equal elements scattered over the list.
             // !!not a guaranteed feature!!
             if( cmpfunc(o->value, list->cursor->value) <= 0 )
@@ -371,7 +367,7 @@ T *s2list_sort(T *list, s2func_sort_cmp_t cmpfunc)
             else break;
         }
 
-        // insert cursor head just before ``o''.
+        // insert cursor head just before `o`.
 
         t = list->cursor;
         list->cursor = list->cursor->next;
