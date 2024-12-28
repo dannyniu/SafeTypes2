@@ -22,5 +22,5 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs/
-      - name step 3/3 deploy
-        uses actions/deploy-pages@v4
+      - name: step 3/3 deploy
+        uses: actions/deploy-pages@v4
