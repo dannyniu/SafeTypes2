@@ -17,10 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-        wget https://github.com/doxygen/doxygen/releases/download/Release_1_12_0/doxygen-1.12.0.linux.bin.tar.gz
-        tar xzvf doxygen-1.12.0.linux.bin.tar.gz
-        cd doxygen-1.12.0
-        sudo make install
+          wget https://github.com/doxygen/doxygen/releases/download/Release_1_12_0/doxygen-1.12.0.linux.bin.tar.gz
+          tar xzvf doxygen-1.12.0.linux.bin.tar.gz
+          cd doxygen-1.12.0
+          sudo make install
       - name: step 0/3 checkout
         uses: actions/checkout@v4
       - name: step 1/3 configure
