@@ -7,7 +7,7 @@ on:
 
 jobs:
   Docs-Gen-Pages-Deploy:
-    runs-on ubuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - run: apt-get install doxygen
       - name: step 0/3 checkout
