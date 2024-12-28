@@ -16,11 +16,12 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - run: |
-        wget https://github.com/doxygen/doxygen/releases/download/Release_1_12_0/doxygen-1.12.0.linux.bin.tar.gz
-        tar xzvf doxygen-1.12.0.linux.bin.tar.gz
-        cd doxygen-1.12.0
-        sudo make install
+      # 2024-12-28:
+      # The runner provided by GitHub provided an old version of Doxygen
+      # which wasn't able to generate the docs correctly properly.
+      # Therefore this action file is forked to use a fixed version
+      # of Doxygen, which require occasional updates when needed.
+      - run: sudo apt-get install doxygen
       - name: step 0/3 checkout
         uses: actions/checkout@v4
       - name: step 1/3 configure
