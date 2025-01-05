@@ -91,6 +91,16 @@ void *s2data_map(T *restrict ctx, size_t offset, size_t len);
 int s2data_unmap(T *restrict ctx);
 
 /// @fn
+/// @param ctx the handle to the 'data' object.
+///
+/// @details
+/// Added 2025-01-04.
+/// Request a transient map from the beginning of the 'data' object.
+/// The caller shall ensure no resize or simultaneous modification occur,
+/// as otherwise will result in undefined behavior.
+void *s2data_weakmap(T *restrict ctx);
+
+/// @fn
 /// @param ctx the handle to the 'data' object to which the length is changed.
 /// @param len len the requested new length of the 'data' object.
 /// @returns 0 on success, and -1 on error.

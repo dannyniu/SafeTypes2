@@ -136,6 +136,18 @@ int s2data_unmap(T *restrict ctx)
     return 0;
 }
 
+void *s2data_weakmap(T *restrict ctx)
+{
+    // refer to info in `s2data_map`.
+    if( ctx->len <= DATA_INLINE_MAX )
+        ((uint8_t *)ctx->buf)[ctx->len] = '\0';
+    else ((uint8_t *)ctx->ptr)[ctx->len] = '\0';
+
+    if( ctx->len > DATA_INLINE_MAX )
+        return  ((uint8_t *)ctx->ptr);
+    else return ((uint8_t *)ctx->buf);
+}
+
 int s2data_trunc(T *restrict ctx, size_t len)
 {
     // 2024-06-15:
