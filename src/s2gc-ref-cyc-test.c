@@ -102,7 +102,7 @@ int main()
     }
     putchar('\n');
 
-    printf("callocs: %d, frees: %d.\n", allocs, frees);
+    printf("callocs: %ld, frees: %ld.\n", (long)allocs, (long)frees);
 
     return ret;
 }
