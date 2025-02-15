@@ -98,11 +98,10 @@ int main()
     for(i=0; i<4; i++)
     {
         if( mh[i] ) ret = EXIT_FAILURE;
-        printf("%08lx%c", (long)mh[i], i==4 ? '\n' : ' ');
+        printf("%08lx%c", (long)mh[i], i==3 ? '\n' : ' ');
     }
-    putchar('\n');
 
-    printf("callocs: %ld, frees: %ld.\n", (long)allocs, (long)frees);
+    printf("mem-acquire: %ld, mem-release: %ld.\n", allocs, frees);
 
     return ret;
 }

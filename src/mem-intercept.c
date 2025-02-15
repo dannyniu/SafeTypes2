@@ -8,6 +8,7 @@ uint32_t mh[4] = {0};
 
 long allocs = 0;
 long frees = 0;
+bool trace = false;
 
 void *mem_intercept(void *a)
 {
