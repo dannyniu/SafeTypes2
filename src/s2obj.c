@@ -3,6 +3,8 @@
 #define safetypes2_implementing_obj
 #include "s2obj.h"
 
+#ifndef SAFETYPES2_BUILD_WITHOUT_GC
+
 #if __has_include(<pthread.h>)
 #include <pthread.h>
 #else
@@ -73,6 +75,8 @@ static bool thrd_recursion_counter_initialized = false;
 
 static uint64_t mark_last = 0;
 
+#endif /* SAFETYPES2_BUILD_WITHOUT_GC */
+
 T *s2gc_obj_alloc(s2obj_typeid_t type, size_t sz)
 {
     T *ret;
@@ -86,9 +90,11 @@ T *s2gc_obj_alloc(s2obj_typeid_t type, size_t sz)
         "Type specifier needing update or adaptation!" );
     ret->type = type;
     ret->guard = 0;
-    ret->mark = mark_last;
     ret->refcnt = 1;
     ret->keptcnt = 0;
+
+#ifndef SAFETYPES2_BUILD_WITHOUT_GC
+    ret->mark = mark_last;
 
     // the lock is expected to be short-term.
     if( gc_anch.threaded )
@@ -113,11 +119,14 @@ T *s2gc_obj_alloc(s2obj_typeid_t type, size_t sz)
 
     if( gc_anch.threaded )
         pthread_mutex_unlock(&gc_anch.lck_master);
+#endif /* SAFETYPES2_BUILD_WITHOUT_GC */
+
     return ret;
 }
 
 void s2gc_obj_dealloc(T *restrict obj)
 {
+#ifndef SAFETYPES2_BUILD_WITHOUT_GC
     // the lock is expected to be short-term.
     if( gc_anch.threaded )
         pthread_mutex_lock(&gc_anch.lck_master);
@@ -144,15 +153,18 @@ void s2gc_obj_dealloc(T *restrict obj)
 
     if( gc_anch.threaded )
         pthread_mutex_unlock(&gc_anch.lck_master);
+#endif /* SAFETYPES2_BUILD_WITHOUT_GC */
 
     memset(obj, 0, sizeof(*obj));
     free(obj);
 }
 
+#ifndef SAFETYPES2_BUILD_WITHOUT_GC
 void s2gc_set_threading(bool enabled)
 {
     gc_anch.threaded = enabled;
 }
+#endif /* SAFETYPES2_BUILD_WITHOUT_GC */
 
 T *s2obj_retain(T *restrict obj)
 {
@@ -162,8 +174,12 @@ T *s2obj_retain(T *restrict obj)
 
 T *s2obj_keep(T *restrict obj)
 {
+#ifndef SAFETYPES2_BUILD_WITHOUT_GC
     ++obj->keptcnt;
     return obj;
+#else /* !SAFETYPES2_BUILD_WITHOUT_GC */
+    return s2obj_retain(obj);
+#endif /* SAFETYPES2_BUILD_WITHOUT_GC */
 }
 
 void s2obj_release(T *restrict obj)
@@ -173,9 +189,11 @@ void s2obj_release(T *restrict obj)
     assert( obj->refcnt > 0 );
     if( !--obj->refcnt && !obj->keptcnt )
     {
+#ifndef SAFETYPES2_BUILD_WITHOUT_GC
         // Added 2024-02-26.
         if( gc_anch.gc_inprogress )
             obj->guard = 1;
+#endif /* SAFETYPES2_BUILD_WITHOUT_GC */
 
         // 2024-02-21:
         // Finalize the context of the object
@@ -186,6 +204,7 @@ void s2obj_release(T *restrict obj)
         if( obj->finalf ) // 2024-08-15: weak reference support
             obj->finalf(obj);
 
+#ifndef SAFETYPES2_BUILD_WITHOUT_GC
         if( gc_anch.gc_inprogress )
         {
             // 2024-02-27:
@@ -193,12 +212,15 @@ void s2obj_release(T *restrict obj)
             // until their container(s) are gone.
             obj->mark = mark_last|1;
         }
-        else s2gc_obj_dealloc(obj);
+        else 
+#endif /* SAFETYPES2_BUILD_WITHOUT_GC */
+            s2gc_obj_dealloc(obj);
     }
 }
 
 void s2obj_leave(T *restrict obj)
 {
+#ifndef SAFETYPES2_BUILD_WITHOUT_GC
     if( obj->guard == 1 ) return;
 
     assert( obj->keptcnt > 0 );
@@ -219,6 +241,9 @@ void s2obj_leave(T *restrict obj)
         }
         else s2gc_obj_dealloc(obj);
     }
+#else /* !SAFETYPES2_BUILD_WITHOUT_GC */
+    return s2obj_release(obj);
+#endif /* SAFETYPES2_BUILD_WITHOUT_GC */
 }
 
 s2iter_t *s2obj_iter_create(T *restrict obj)
@@ -227,6 +252,8 @@ s2iter_t *s2obj_iter_create(T *restrict obj)
         return NULL;
     else return obj->itercreatf(obj);
 }
+
+#ifndef SAFETYPES2_BUILD_WITHOUT_GC
 
 static void s2gc_thrd_recursion_initializer()
 {
@@ -620,3 +647,5 @@ void s2gc_collect(void)
     mark_last = mark;
     s2gc_gcop_unlock(0);
 }
+
+#endif /* SAFETYPES2_BUILD_WITHOUT_GC */

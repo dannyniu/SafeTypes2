@@ -19,5 +19,6 @@ src="\
 
 arch_family=defaults
 srcset="Plain C"
+cflags="-D SAFETYPES2_BUILD_WITHOUT_GC"
 
 tests_run

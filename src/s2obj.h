@@ -194,6 +194,12 @@ T {
     // will be able to include an `s2obj_t base;` field at the head, allowing
     // type-safe passing of derived types to variables and parameters
     // expecting generic base objects.
+
+    // 2025-02-15:
+    // A build option "SAFETYPES_BUILD_WITHOUT_GC" is introduced to build
+    // a simplified variant of the library without garbage collection.
+    // Although many fields of this structure will be ignored in such variant,
+    // they're nonetheless retained in doubt that there may be break in ABI.
 };
 
 /// @page objsys Object System
@@ -258,6 +264,8 @@ void s2gc_set_threading(bool enabled);
 /// @brief
 /// Explicitly invoke SafeTypes2 garbage collection.
 /// Applications that never creates reference cycles don't need this.
+/// @note
+/// 2025-02-15: This function is not available in a build without GC.
 void s2gc_collect(void);
 
 /// @fn
@@ -268,6 +276,9 @@ T *s2obj_retain(T *restrict obj);
 /// @fn
 /// @brief Increases 'kept' count. Invoked by container implementations.
 /// @returns obj
+/// @note
+/// 2025-02-15:
+/// This function is identical to `s2obj_retain` in builds without GC.
 T *s2obj_keep(T *restrict obj);
 
 /// @fn
@@ -276,6 +287,9 @@ void s2obj_release(T *restrict obj);
 
 /// @fn
 /// @brief Decreases 'kept' count. Invoked by container implementations.
+/// @note
+/// 2025-02-15:
+/// This function is identical to `s2obj_release` in builds without GC.
 void s2obj_leave(T *restrict obj);
 
 /// @fn
@@ -288,10 +302,14 @@ s2iter_t *s2obj_iter_create(T *restrict obj);
 /// @brief
 /// To obtain a "reader" lock for the application thread.
 /// ("thrd" is a fortunate portmanteau of "thread-reading".)
+/// @note
+/// 2025-02-15: This function is not available in a build without GC.
 int s2gc_thrd_lock();
 
 /// @fn
 /// @brief To release the "reader" lock from a application thread.
+/// @note
+/// 2025-02-15: This function is not available in a build without GC.
 int s2gc_thrd_unlock();
 
 #ifndef safetypes2_implementing_obj
