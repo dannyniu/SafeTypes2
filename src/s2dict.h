@@ -28,12 +28,31 @@
 #define T struct s2ctx_dict
 typedef T s2dict_t;
 
-#ifndef safetypes2_implementing_dict
-T {
-    s2obj_t base;
-    int payload_context[];
+enum s2_dict_member_flags {
+    s2_dict_member_null = 0, // unset.
+    s2_dict_member_set = 1, // kept-counted reference.
+    s2_dict_member_collision = 2, // collision in hashed key.
 };
-#endif /* safetypes2_implementing_dict */
+
+struct s2ctx_dict_member {
+    int flags;
+    s2dict_t *collection;
+    s2data_t *key;
+    union {
+        s2obj_t *value;
+        struct s2ctx_dict_table *nested;
+    };
+};
+
+struct s2ctx_dict_table {
+    int level; // 0 at root.
+    struct s2ctx_dict_member members[256];
+};
+
+T {
+    s2obj_base;
+    struct s2ctx_dict_table root;
+};
 
 /// @fn
 /// @brief Sets the randomization vector for hash tables globally.

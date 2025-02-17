@@ -33,12 +33,21 @@
 #define T struct s2ctx_list
 typedef T s2list_t;
 
-#ifndef safetypes2_implementing_list
-T {
-    s2obj_t base;
-    int payload_context[];
+struct s2ctx_list_element {
+    T *collection;
+    s2obj_t *value;
+    struct s2ctx_list_element *prev;
+    struct s2ctx_list_element *next;
 };
-#endif /* safetypes2_implementing_list */
+
+T {
+    s2obj_base;
+    size_t len;
+    size_t pos;
+    struct s2ctx_list_element *cursor;
+    struct s2ctx_list_element anch_head;
+    struct s2ctx_list_element anch_tail;
+};
 
 /// @fn
 /// @brief Creates and returns an empty list.

@@ -13,9 +13,21 @@
 /// @section type-hier Type Hierarchy
 /// The "object" type (denoted by `s2obj_t`) is the base type for all
 /// externally-exposed types except a few (e.g. `s2iter_t`). It defines
-/// common interface for derived types. All derived types defined by
-/// SafeTypes2 are incomplete (C language concept), and are meant to be
-/// used from pointer handles.
+/// common interface for derived types.
+///
+/// Before 2025-02-17, all derived types defined by SafeTypes2 were
+/// incomplete (C language concept), as they're meant to be used from
+/// pointer handles. This is still the case - although you technically
+/// can declare a SafeTypes2 object either locally or statically, their
+/// interaction with the garbage collection, and even with regard to
+/// reference and kept counts when you're opting out of GC, are
+/// completely undefined.
+///
+/// The reason now they're being defined to be complete, is that the way
+/// they were defined were not compatible with C89 - a compatibility goal
+/// which @dannyniu would like to achieve to maximize the audience of the
+/// library; also, this make it easier for 3rd-party libraries and applications
+/// to create further derived types.
 ///
 /// The internal data structures have tag names prefixed with "s2ctx_",
 /// whereas externally visible ones are defined as types and
@@ -177,10 +189,10 @@ T {
     uint32_t mark;
     
     // referenced by a lexical variable.
-    size_t refcnt;
+    uint32_t refcnt;
     
     // referenced by a container object.
-    size_t keptcnt;
+    uint32_t keptcnt;
 
     s2func_iter_create_t itercreatf;
     s2func_final_t finalf;
@@ -201,6 +213,16 @@ T {
     // Although many fields of this structure will be ignored in such variant,
     // they're nonetheless retained in doubt that there may be break in ABI.
 };
+
+/// @def s2obj_base
+/// @brief Base header for objects.
+/// @details
+/// This is the base object header to be placed at the beginning of all
+/// types derived from `s2obj_t`.
+/// - The `pobj` field will point to the beginning address of the object,
+///   which make it easy to refer to the object itself as an `s2obj_t`.
+/// - The `ctxinfo` can hold contextual information for arbitrary purpose.
+#define s2obj_base struct { s2obj_t base; s2obj_t *pobj; intptr_t ctxinfo; }
 
 /// @page objsys Object System
 /// @section mem-gc Resource Management and Garbage Collection.

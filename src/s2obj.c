@@ -73,7 +73,7 @@ static struct gc_anchor_ctx gc_anch = {
 static pthread_key_t thrd_recursion_counter;
 static bool thrd_recursion_counter_initialized = false;
 
-static uint64_t mark_last = 0;
+static uint32_t mark_last = 0;
 
 #endif /* SAFETYPES2_BUILD_WITHOUT_GC */
 

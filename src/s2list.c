@@ -3,22 +3,6 @@
 #define safetypes2_implementing_list
 #include "s2list.h"
 
-struct s2ctx_list_element {
-    T *collection;
-    s2obj_t *value;
-    struct s2ctx_list_element *prev;
-    struct s2ctx_list_element *next;
-};
-
-struct s2ctx_list {
-    s2obj_t basetype;
-    size_t len;
-    size_t pos;
-    struct s2ctx_list_element *cursor;
-    struct s2ctx_list_element anch_head;
-    struct s2ctx_list_element anch_tail;
-};
-
 void s2list_final(T *list)
 {
     struct s2ctx_list_element *M, *L;
@@ -33,7 +17,7 @@ void s2list_final(T *list)
 }
 
 struct s2ctx_list_iter {
-    struct s2ctx_iter basetype;
+    struct s2ctx_iter base;
     struct s2ctx_list_element *cursor;
     s2list_t *list;
 };
@@ -42,16 +26,16 @@ static int s2list_iter_step(s2list_iter_t *restrict iter)
 {
     if( iter->cursor != &iter->list->anch_tail )
     {
-        if( iter->basetype.value )
-            iter->basetype.key = (void *)((intptr_t)iter->basetype.key + 1);
-        iter->basetype.value = iter->cursor->value;
+        if( iter->base.value )
+            iter->base.key = (void *)((intptr_t)iter->base.key + 1);
+        iter->base.value = iter->cursor->value;
         iter->cursor = iter->cursor->next;
         return 1;
     }
     else
     {
-        iter->basetype.key = (void *)((intptr_t)iter->basetype.key + 1);
-        iter->basetype.value = NULL;
+        iter->base.key = (void *)((intptr_t)iter->base.key + 1);
+        iter->base.value = NULL;
         return 0;
     }
 }
@@ -63,10 +47,10 @@ static s2list_iter_t *s2list_iter_create(T *list)
     ret = calloc(1, sizeof(struct s2ctx_list_iter));
     if( !ret ) return NULL;
 
-    ret->basetype.final = (s2iter_final_func_t)free;
-    ret->basetype.next = (s2iter_stepfunc_t)s2list_iter_step;
-    ret->basetype.key = (void *)0;
-    ret->basetype.value = NULL;
+    ret->base.final = (s2iter_final_func_t)free;
+    ret->base.next = (s2iter_stepfunc_t)s2list_iter_step;
+    ret->base.key = (void *)0;
+    ret->base.value = NULL;
 
     ret->cursor = list->anch_head.next;
     ret->list = list;
@@ -81,8 +65,8 @@ T *s2list_create()
     list = (T *)s2gc_obj_alloc(S2_OBJ_TYPE_LIST, sizeof(T));
     if( !list ) return NULL;
 
-    list->basetype.itercreatf = (s2func_iter_create_t)s2list_iter_create;
-    list->basetype.finalf = (s2func_final_t)s2list_final;
+    list->base.itercreatf = (s2func_iter_create_t)s2list_iter_create;
+    list->base.finalf = (s2func_final_t)s2list_final;
 
     list->len = 0;
     list->pos = 0;

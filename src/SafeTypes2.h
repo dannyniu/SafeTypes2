@@ -12,6 +12,7 @@
 #include "s2data.h"
 #include "s2dict.h"
 #include "s2list.h"
+#include "s2ref.h"
 
 /// @page gen General Overview
 ///

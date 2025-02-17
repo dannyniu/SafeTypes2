@@ -28,12 +28,16 @@
 #define T struct s2ctx_data
 typedef T s2data_t;
 
-#ifndef safetypes2_implementing_data
-T {
-    s2obj_t base;
-    int payload_context[];
+#define DATA_INLINE_MAX 19
+
+struct s2ctx_data {
+    s2obj_base;
+    size_t len;
+    void *ptr;
+    unsigned long mapcnt;
+    unsigned long pushed;
+    alignas(max_align_t) uint8_t buf[DATA_INLINE_MAX+1];
 };
-#endif /* safetypes2_implementing_data */
 
 /// @fn
 /// @param len the initial length of the created 'data' handle.

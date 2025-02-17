@@ -5,17 +5,6 @@
 #include "s2obj.h"
 #include "s2data.h"
 
-#define DATA_INLINE_MAX 19
-
-struct s2ctx_data {
-    s2obj_t basetype;
-    size_t len;
-    void *ptr;
-    unsigned long mapcnt;
-    unsigned long pushed;
-    alignas(max_align_t) uint8_t buf[DATA_INLINE_MAX+1];
-};
-
 static void s2data_final(T *restrict ctx)
 {
     // this can optionally be enabled:
@@ -59,8 +48,8 @@ T *s2data_create(size_t len)
     // can be usable as nul-terminated string.
     ((char *)ptr)[len] = '\0';
 
-    ret->basetype.itercreatf = NULL;
-    ret->basetype.finalf = (s2func_final_t)s2data_final;
+    ret->base.itercreatf = NULL;
+    ret->base.finalf = (s2func_final_t)s2data_final;
 
     ret->len = len;
     ret->mapcnt = 0;

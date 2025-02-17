@@ -13,34 +13,6 @@
 // report errors through return values, and this is
 // the approach taken in SafeTypes.
 
-enum s2_dict_member_flags {
-    s2_dict_member_null = 0, // unset.
-    s2_dict_member_set = 1, // kept-counted reference.
-    s2_dict_member_collision = 2, // collision in hashed key.
-};
-
-struct s2ctx_dict_member {
-    int flags;
-    s2dict_t *collection;
-    s2data_t *key;
-    union {
-        s2obj_t *value;
-        struct s2ctx_dict_table *nested;
-    };
-};
-
-struct s2ctx_dict_table {
-    int level; // 0 at root.
-    struct s2ctx_dict_member members[256];
-};
-
-T {
-    s2obj_t basetype;
-    int iterlevel;
-    int iterpos[S2_DICT_HASH_MAX];
-    struct s2ctx_dict_table root;
-};
-
 static_assert( S2_DICT_HASH_MAX == 16,
                "Code changed too radically, cannot compile!");
 static uint8_t key_siphash[S2_DICT_HASH_MAX];
@@ -98,7 +70,7 @@ static void s2dict_final(T *dict)
 }
 
 struct s2ctx_dict_iter {
-    struct s2ctx_iter basetype;
+    struct s2ctx_iter base;
     int iterlevel;
     int iterpos[S2_DICT_HASH_MAX];
     s2dict_t *dict;
@@ -113,13 +85,13 @@ static s2dict_iter_t *s2dict_iter_create(T *restrict dict)
     iter = calloc(1, sizeof(s2dict_iter_t));
     if( !iter ) return NULL;
 
-    iter->basetype.final = (s2iter_final_func_t)free;
-    iter->basetype.next = (s2iter_stepfunc_t)s2dict_iter_step;
+    iter->base.final = (s2iter_final_func_t)free;
+    iter->base.next = (s2iter_stepfunc_t)s2dict_iter_step;
     iter->iterlevel = 0;
     iter->dict = dict;
 
     for(i=0; i<S2_DICT_HASH_MAX; i++)
-        dict->iterpos[i] = 0;
+        iter->iterpos[i] = 0;
 
     return iter;
 }
@@ -132,8 +104,8 @@ T *s2dict_create()
     dict = (T *)s2gc_obj_alloc(S2_OBJ_TYPE_DICT, sizeof(T));
     if( !dict ) return NULL;
 
-    dict->basetype.itercreatf = (s2func_iter_create_t)s2dict_iter_create;
-    dict->basetype.finalf = (s2func_final_t)s2dict_final;
+    dict->base.itercreatf = (s2func_iter_create_t)s2dict_iter_create;
+    dict->base.finalf = (s2func_final_t)s2dict_final;
 
     dict->root.level = 0;
 
@@ -143,11 +115,6 @@ T *s2dict_create()
         dict->root.members[i].collection = dict;
         dict->root.members[i].key = NULL;
         dict->root.members[i].value = NULL;
-    }
-
-    for(i=0; i<S2_DICT_HASH_MAX; i++)
-    {
-        dict->iterpos[i] = 0;
     }
 
     return dict;
@@ -463,8 +430,8 @@ dive_in:
     }
     else if( V->members[i].flags == s2_dict_member_set )
     {
-        iter->basetype.value = V->members[i].value;
-        iter->basetype.key   = V->members[i].key;
+        iter->base.value = V->members[i].value;
+        iter->base.key   = V->members[i].key;
         iter->iterpos[level] ++;
         return 1;
     }

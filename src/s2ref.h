@@ -14,7 +14,7 @@
 /// 2. it enables the program to (either entirely, or in compartments)
 ///    opt out of tracing garbage collection and use weakrefs instead.
 
-#include "common.h"
+#include "s2obj.h"
 
 /// @fn
 /// @param obj the object handle the type of which is being checked.
@@ -27,19 +27,17 @@
 #define T struct s2ctx_ref
 typedef T s2ref_t;
 
-#ifndef safetypes2_implementing_ref
 T {
-    s2obj_t base;
-    int payload_context[];
+    s2obj_base;
+    void *ptr;
 };
-#endif /* safetypes2_implementing_ref */
 
 /// @fn
 /// @brief Creates and returns an reference object.
 /// @param ptr the pointer to wrap in the reference object.
 /// @param finalizer the finalizer to be called when releasing this object.
 /// @returns a pointer to the list object handle, or NULL on error.
-T *s2ref_create(void *ptr, void (*finalizer)(void *ptr));
+T *s2ref_create(void *ptr, void (*finalizer)(T *ptr));
 
 /// @fn
 /// @brief Creates a weak reference. Equivalent to `s2ref_create(ptr, NULL)`.
