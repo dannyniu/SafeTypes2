@@ -4,16 +4,13 @@
 
 #include "s2ref.h"
 
-// 2025-02-17:
-// Several bugs are fixed:
-// 1. forgetting to set the `ptr` member to the
-//    value of its corresponding argument.
-// 2. forgetting to expose the `ptr` member to the finalizer.
-//
-// Changed to publically exposed public complete structure type
-// as part of 2025-02-17 overhaul.
+static void s2ref_final(T *ref)
+{
+    if( ref->finalizer )
+        ref->finalizer(ref->ptr);
+}
 
-T *s2ref_create(void *ptr, void (*finalizer)(T *ptr))
+T *s2ref_create(void *ptr, s2ref_final_func_t finalizer)
 {
     T *ref;
 
@@ -21,8 +18,9 @@ T *s2ref_create(void *ptr, void (*finalizer)(T *ptr))
     if( !ref ) return NULL;
 
     ref->ptr = ptr;
+    ref->finalizer = finalizer;
     ref->base.itercreatf = NULL;
-    ref->base.finalf = (s2func_final_t)finalizer;
+    ref->base.finalf = (s2func_final_t)s2ref_final;
 
     return ref;
 }
