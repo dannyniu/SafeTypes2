@@ -116,6 +116,14 @@ int s2list_pop(T *list, s2obj_t **out);
 /// Reference and kept counts're not changed.
 int s2list_get(T *list, s2obj_t **out);
 
+/// @fn
+/// @brief Puts an object at the current position, the old value is replaced.
+/// @param list the list object handle.
+/// @param obj the element to put to the current cursor position.
+/// @param semantic the setter semantic to use (see s2containers.h).
+/// @returns one of the access return values (see s2containers.h).
+int s2list_put(T *list, s2obj_t *obj, int semantic);
+
 // Added 2024-10-09.
 //
 /// @fn

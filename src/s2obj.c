@@ -92,6 +92,7 @@ T *s2gc_obj_alloc(s2obj_typeid_t type, size_t sz)
     ret->guard = 0;
     ret->refcnt = 1;
     ret->keptcnt = 0;
+    ((s2obj_base *)ret)->pobj = ret;
 
 #ifndef SAFETYPES2_BUILD_WITHOUT_GC
     ret->mark = mark_last;

@@ -27,23 +27,21 @@ int main(void)
     for(i=4; i<=8; i+=2)
     {
         v = s2data_create(sizeof(long));
-        *(long *)s2data_map(v, 0, sizeof(long)) = i;
-        s2data_unmap(v);
+        *(long *)s2data_weakmap(v) = i;
 
-        if( s2list_push(x, &v->base, s2_setter_gave) != s2_access_success )
+        if( s2list_push(x, v->pobj, s2_setter_gave) != s2_access_success )
             printf("List Push Failed!\n"), fails ++;
     }
 
     for(i=7; i>=5; i-=2)
     {
         v = s2data_create(sizeof(long));
-        *(long *)s2data_map(v, 0, sizeof(long)) = i;
-        s2data_unmap(v);
+        *(long *)s2data_weakmap(v) = i;
 
         if( s2list_seek(x, -1, S2_LIST_SEEK_CUR) == -1 )
             printf("CUR Seek on Live List Failed!\n"), fails ++;
         
-        if( s2list_insert(x, &v->base, s2_setter_gave) != s2_access_success )
+        if( s2list_insert(x, v->pobj, s2_setter_gave) != s2_access_success )
             printf("List Insert Failed!\n"), fails ++;
     }
 
@@ -53,10 +51,9 @@ int main(void)
     for(i=3; i>=0; i--)
     {
         v = s2data_create(sizeof(long));
-        *(long *)s2data_map(v, 0, sizeof(long)) = i;
-        s2data_unmap(v);
+        *(long *)s2data_weakmap(v) = i;
 
-        if( s2list_insert(x, &v->base, s2_setter_gave) != s2_access_success )
+        if( s2list_insert(x, v->pobj, s2_setter_gave) != s2_access_success )
             printf("List Insert Failed!\n"), fails ++;
     }
 
@@ -66,23 +63,21 @@ int main(void)
     for(i=9; i<=10; i++)
     {
         v = s2data_create(sizeof(long));
-        *(long *)s2data_map(v, 0, sizeof(long)) = i;
-        s2data_unmap(v);
+        *(long *)s2data_weakmap(v) = i;
 
-        if( s2list_push(x, &v->base, s2_setter_gave) != s2_access_success )
+        if( s2list_push(x, v->pobj, s2_setter_gave) != s2_access_success )
             printf("List Push Failed!\n"), fails ++;
     }
 
-    iter = s2obj_iter_create(&x->base);
+    iter = s2obj_iter_create(x->pobj);
     for(ret=iter->next(iter), i=0; ret>0; ret=iter->next(iter), i++)
     {
         v = (void *)iter->value;
-        if( *(lp = (long *)s2data_map(v, 0, sizeof(long))) != i )
+        if( *(lp = (long *)s2data_weakmap(v)) != i )
         {
             printf("List Enumeration Encountered Wrong Value: %ld != %d.\n",
                    *lp, i), fails ++;
         }
-        s2data_unmap(v);
         if( (intptr_t)iter->key != i )
         {
             printf("List Enumeration Encountered Wrong Index: %ld != %d.\n",
@@ -96,14 +91,13 @@ int main(void)
         if( s2list_shift_T(s2data_t)(x, &v) != s2_access_success )
             printf("List Shift Failed!\n"), fails ++;
 
-        if( *(lp = (long *)s2data_map(v, 0, sizeof(long))) != i )
+        if( *(lp = (long *)s2data_weakmap(v)) != i )
         {
             printf("List Shift Encountered Wrong Value: %ld != %d.\n",
                    *lp, i), fails ++;
         }
-        s2data_unmap(v);
 
-        s2obj_release(&v->base);
+        s2obj_release(v->pobj);
     }
    
     s2list_seek(x, 0, S2_LIST_SEEK_END);
@@ -112,35 +106,51 @@ int main(void)
         if( s2list_pop_T(s2data_t)(x, &v) != s2_access_success )
             printf("List Pop Failed!\n"), fails ++;
 
-        if( *(lp = (long *)s2data_map(v, 0, sizeof(long))) != i )
+        if( *(lp = (long *)s2data_weakmap(v)) != i )
         {
             printf("List Pop Encountered Wrong Value: %ld != %d.\n",
                    *lp, i), fails ++;
         }
-        s2data_unmap(v);
         
-        s2obj_release(&v->base);
+        s2obj_release(v->pobj);
     }
 
     s2list_seek(x, -1, S2_LIST_SEEK_END);
     
     if( s2list_pop_T(s2data_t)(x, &v) != s2_access_success )
         printf("List Pop Failed!\n"), fails ++;
-    if( *(lp = (long *)s2data_map(v, 0, sizeof(long))) != 6 )
+    if( *(lp = (long *)s2data_weakmap(v)) != 6 )
     {
         printf("List Pop Encountered Wrong Value: %ld != %d.\n",
                *lp, i), fails ++;
     }
-    s2data_unmap(v);
 
     if( s2list_shift_T(s2data_t)(x, &v) != s2_access_success )
         printf("List Shift Failed!\n"), fails ++;
-    if( *(lp = (long *)s2data_map(v, 0, sizeof(long))) != 7 )
+    if( *(lp = (long *)s2data_weakmap(v)) != 7 )
     {
         printf("List Shift Encountered Wrong Value: %ld != %d.\n",
                *lp, i), fails ++;
     }
-    s2data_unmap(v);
+
+    s2list_seek(x, 0, S2_LIST_SEEK_SET);
+    if( s2list_get_T(s2data_t)(x, &v) != s2_access_success )
+        printf("List Get Failed!\n"), fails ++;
+    if( *(lp = (long *)s2data_weakmap(v)) != 3 )
+    {
+        printf("List Get Encountered Wrong Value: %ld != %d.\n",
+               *lp, i), fails ++;
+    }
+
+    v = s2data_create(sizeof(long));
+    *(long *)s2data_weakmap(v) = 384;
+    if( s2list_put(x, v->pobj, s2_setter_gave) != s2_access_success )
+        printf("List Put Failed!\n"), fails++;
+    if( s2list_get_T(s2data_t)(x, &v) != s2_access_success )
+        printf("List Get Failed!\n"), fails++;
+    if( *(lp = (long *)s2data_weakmap(v)) != 384 )
+        printf("List Get Encountered Wrong Value %ld != %d.\n",
+               *lp, 384), fails++;
    
     if( fails ) return EXIT_FAILURE; else return EXIT_SUCCESS;
 }

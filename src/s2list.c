@@ -225,6 +225,32 @@ int s2list_get(T *list, s2obj_t **out)
     return s2_access_success;
 }
 
+int s2list_put(T *list, s2obj_t *obj, int semantic)
+{
+    S2_LIST_SETTER_ASSERTIONS;
+
+    if( list->pos >= list->len )
+    {
+        return s2_access_error;
+    }
+
+    switch( semantic ){
+    case s2_setter_kept:
+        s2obj_keep(obj);
+        break;
+
+    case s2_setter_gave:
+        s2obj_keep(obj);
+        s2obj_release(obj);
+        break;
+    }
+
+    if( list->cursor->value ) s2obj_leave(list->cursor->value);
+
+    list->cursor->value = obj;
+    return s2_access_success;
+}
+
 ptrdiff_t s2list_pos(T *list){ return list->pos; }
 ptrdiff_t s2list_len(T *list){ return list->len; }
 
