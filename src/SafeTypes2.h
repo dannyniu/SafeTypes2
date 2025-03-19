@@ -154,14 +154,10 @@
 ///     #define T struct typectx_pair
 ///     typedef T pair_t;
 ///
-///     #ifndef mylibrary_implementing_pair
-///     // This allows enforcing type-safe passing of the 'pair' type
-///     // to variables and parameters.
 ///     T {
-///         s2obj_t base;
-///         int payload_context[];
+///         s2obj_base;
+///         s2data_t *left, *right;
 ///     };
-///     #endif /* mylibrary_implementing_pair
 ///
 ///     // ''refcnt'' and ''keptcnt'' are not incremented.
 ///     int pair_get_left (T *pair, s2data_t **out);
@@ -181,11 +177,6 @@
 ///     #define mylibrary_implementing_pair
 ///     #define safetypes2_implementing_misc
 ///     #include "pair.h"
-///
-///     struct typectx_pair {
-///         s2obj_t basetype;
-///         s2data_t *left, *right;
-///     };
 ///
 ///     static void pair_final(T *pair)
 ///     {
