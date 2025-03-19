@@ -140,6 +140,20 @@ int s2data_cmp(T *restrict s1, T *restrict s2);
 int s2data_putc(T *restrict ctx, int c);
 
 /// @fn
+/// @brief adds a string of bytes to the accumulation staging area.
+/// @param ctx the 'data' object handle to put the bytes.
+/// @param str the byte string to put.
+/// @param len the number of bytes in the string.
+/// @returns 0 on success and -1 on failure.
+/// @details
+/// The function is defined in terms of `s2data_putc`, this means that
+/// the user don't have to call `s2data_putfin` *before* calling this
+/// function, but does have to call it *afterwards*. This function has
+/// no atomicity guarantee - if error occur during putting, the actual
+/// number of bytes put may be less than `len`.
+int s2data_puts(T *restrict ctx, void const *str, size_t len);
+
+/// @fn
 /// @brief flush bytes in the staging area into the internal buffer.
 /// @param ctx the 'data' object handle to flush.
 /// @returns 0 on success and -1 on failure.

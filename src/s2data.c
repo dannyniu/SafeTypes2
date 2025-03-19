@@ -248,6 +248,18 @@ int s2data_putc(T *restrict ctx, int c)
     return 0;
 }
 
+int s2data_puts(T *restrict ctx, void const *str, size_t len)
+{
+    uint8_t const *ptr = str;
+    size_t t = 0;
+    for(t=0; t<len; t++)
+    {
+        if( s2data_putc(ctx, ptr[t]) != 0 )
+            return -1;
+    }
+    return 0;
+}
+
 int s2data_putfin(T *restrict ctx)
 {
     size_t oldlen, newlen;
