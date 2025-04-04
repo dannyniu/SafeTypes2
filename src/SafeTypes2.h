@@ -161,10 +161,15 @@
 ///
 ///     // ''refcnt'' and ''keptcnt'' are not incremented.
 ///     int pair_get_left (T *pair, s2data_t **out);
-///     int pair_set_right(T *pair, s2data_t **out);
+///     int pair_get_right(T *pair, s2data_t **out);
 ///
 ///     int pair_set_left (T *pair, s2data_t *in, int semantic);
 ///     int pair_set_right(T *pair, s2data_t *in, int semantic);
+///
+///     #define pair_get_left_T(membertype)                             \
+///         ((int (*)(pair_t *pair, membertype **out))pair_get_left)
+///     #define pair_get_right_T(membertype)                            \
+///         ((int (*)(pair_t *pair, membertype **out))pair_get_right)
 ///
 ///     #ifndef mylibrary_implementing_pair
 ///     #undef T
@@ -183,8 +188,8 @@
 ///         // [note-refcnt-retained]
 ///         // Because `s2data_t` is not a container type,
 ///         // we don't have to concern with reference loop.
-///         if( pair->left  ) s2obj_release((s2obj_t *)pair->left);
-///         if( pair->right ) s2obj_release((s2obj_t *)pair->right);
+///         if( pair->left  ) s2obj_release(pair->left->pobj);
+///         if( pair->right ) s2obj_release(pair->right->pobj);
 ///     }
 ///
 ///     T *pair_create()
@@ -217,19 +222,21 @@
 ///     int pair_set_left(T *pair, s2data_t *in, int semantic)
 ///     {
 ///         // See note tagged [note-refcnt-retained].
-///         if( pair->left ) s2obj_release((s2obj_t *)pair->left);
+///         s2obj_t *old = pair->left->pobj;
 ///         pair->left = in;
 ///         if( semantic == s2_setter_kept )
-///             s2obj_retain((s2obj_t *)pair->left);
+///             s2obj_retain(pair->left->pobj);
+///         if( old ) s2obj_release(old);
 ///     }
 ///
 ///     int pair_set_right(T *pair, s2data_t *in, int semantic)
 ///     {
 ///         // See note tagged [note-refcnt-retained].
-///         if( pair->right ) s2obj_release((s2obj_t *)pair->right);
+///         s2obj_t *old = pair->right->pobj;
 ///         pair->right = in;
 ///         if( semantic == s2_setter_kept )
-///             s2obj_retain((s2obj_t *)pair->right);
+///             s2obj_retain(pair->right->pobj);
+///         if( old ) s2obj_release(old);
 ///     }
 ///
 /// @important
