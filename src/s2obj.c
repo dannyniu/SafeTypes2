@@ -13,37 +13,40 @@
 
 struct gc_anchor_ctx
 {
+    // 2025-06-09:
+    // The GC synchronization mechanism is being re-written in entirity
+    // based on sketch in "gc-lock-rewrite-2025-06-09.md".
+
     pthread_mutex_t lck_master;
-    pthread_cond_t cv_threads, cv_gc_enter, cv_gc_leave;
+    pthread_cond_t cv_state, cv_counter;
 
     // it is assumed that this will only be changed
     // when there's only 1 thread running.
-    bool threaded;
+    enum {
+        threading_mono = false,
+        threading_multi = true,
+    } threaded;
 
-    // When GC is in-progress, `lck_master` shall be
-    // held by the GC thread. Where as when the GC is
-    // pending, the GC thread may be blocked waiting
-    // for `cv_gc_enter`.
-    bool gc_inprogress;
-
-    // 0: initial state.
-    // 1: gcop locking.
-    // 2: gcop unlocking.
-    short stateguard;
-
-    // Total GC calls made externally from the `thr_count` threads.
-    size_t gc_pending;
-
-    // Total threads acquiring GC "writer" lock.
-    size_t gc_waiting_enter;
-
-    // Total threads releasing GC "writer" lock.
-    size_t gc_waiting_leave;
+    enum {
+        stateguard_invalid,
+        stateguard_free,
+        stateguard_gc_waiting,
+        stateguard_gc_operating,
+        stateguard_gc_completing,
+    } stateguard;
+#define gc_inprogress stateguard == stateguard_gc_operating
 
     // This variable records the number of threads that's
     // currently occupying some objects created from GC -
     // i.e. holding the shared "reader" lock.
     size_t thr_count;
+
+    // Number of threads blocked waiting for GC operation.
+    size_t gc_waiting;
+
+    // Number of threads holding shared "reader" lock that're
+    // blocked wating for GC operation.
+    size_t gc_pending;
 
     T *head;
     T *tail;
@@ -51,16 +54,13 @@ struct gc_anchor_ctx
 
 static struct gc_anchor_ctx gc_anch = {
     .lck_master  = PTHREAD_MUTEX_INITIALIZER,
-    .cv_threads  = PTHREAD_COND_INITIALIZER,
-    .cv_gc_enter = PTHREAD_COND_INITIALIZER,
-    .cv_gc_leave = PTHREAD_COND_INITIALIZER,
+    .cv_state  = PTHREAD_COND_INITIALIZER,
+    .cv_counter = PTHREAD_COND_INITIALIZER,
     .threaded = true,
-    .gc_inprogress = false,
-    .stateguard = 0,
-    .gc_pending = 0,
-    .gc_waiting_enter = 0,
-    .gc_waiting_leave = 0,
+    .stateguard = stateguard_free,
     .thr_count = 0,
+    .gc_waiting = 0,
+    .gc_pending = 0,
 
     .head = NULL,
     .tail = NULL,
@@ -213,7 +213,7 @@ void s2obj_release(T *restrict obj)
             // until their container(s) are gone.
             obj->mark = mark_last|1;
         }
-        else 
+        else
 #endif /* SAFETYPES2_BUILD_WITHOUT_GC */
             s2gc_obj_dealloc(obj);
     }
@@ -285,37 +285,11 @@ int s2gc_thrd_lock()
 
     s2gc_thrd_recursion_initializer();
 
-    // 2024-08-13:
-    // Observe that setting state-guard to 2 and gc-inprogress to true
-    // happens while lck-master is held by gcop-lock, there's no chance
-    // for the condition variable wait on predicate in the following
-    // 2 while loops to become inconsistent.
-
-    while( gc_anch.stateguard != 0 && gc_anch.stateguard != 1 )
+    while( gc_anch.stateguard != stateguard_free &&
+           gc_anch.stateguard != stateguard_gc_waiting )
     {
-        // 2024-08-13:
-        //
-        // As noted in gcop-lock, there was a rare-occuring deadlock.
-        // The duration of the GC lock spans from state-guard become
-        // non-zero to back to zero, and should be atomic - this was
-        // violated when gcop-unlock waits for state-guard to become
-        // 2 while a thrd-lock is requested.
-        //
-        // Several invariants relied on this atomicity, such as
-        // the consistency of thr-count and the per-thread threc.
-        //
-        e = pthread_cond_wait(&gc_anch.cv_threads, &gc_anch.lck_master);
+        e = pthread_cond_wait(&gc_anch.cv_state, &gc_anch.lck_master);
         assert( e == 0 );
-    }
-
-    while( gc_anch.gc_inprogress )
-    {
-        // 2024-05-15:
-        // the condition in this assertion is implied from ''gc_inprogress''.
-        assert( gc_anch.gc_waiting_enter > 0 );
-
-        e = pthread_cond_wait(&gc_anch.cv_threads, &gc_anch.lck_master);
-        assert( e == 0 ); // 2024-02-24: caller can't recover from this error.
     }
 
     threc = (intptr_t)pthread_getspecific(thrd_recursion_counter);
@@ -345,48 +319,25 @@ int s2gc_thrd_unlock()
 
     s2gc_thrd_recursion_initializer();
 
-    while( gc_anch.stateguard != 0 && gc_anch.stateguard != 1 )
+    while( gc_anch.stateguard != stateguard_free &&
+           gc_anch.stateguard != stateguard_gc_waiting )
     {
-        // 2024-08-13: See notes in thrd-lock.
-        e = pthread_cond_wait(&gc_anch.cv_threads, &gc_anch.lck_master);
+        e = pthread_cond_wait(&gc_anch.cv_state, &gc_anch.lck_master);
         assert( e == 0 );
     }
 
     assert( gc_anch.thr_count > 0 );
 
-    // Anomaly enumeration:
-    //
-    // - `gc_inprogress` is true: (enumerated 2024-02-24.)
-    //   GC is supposed to be only operating before or after
-    //   this function, never during it runs.
-    //
-    //   The (intuitively) valid scenario(s):
-    //   1. *_gcop_lock(); *_gcop_unlock(); *_thrd_unlock();
-    //   2. *_thrd_unlock(); *_gcop_lock(); *_gcop_unlock();
-    //
-    //   The multi-threaded scenario(s):
-    //   1. *_gcop_lock(); *_thrd_unlock(); *_gcop_unlock();
-    //      This implies that there's a *_thrd_lock() before *_gcop_lock(),
-    //      in which case *_gcop_lock() is supposed to be blocked until
-    //      after *_thrd_unlock(); returns.
-    //
-    // - nothing else for now.
-
-    assert( !gc_anch.gc_inprogress );
-
     threc = (intptr_t)pthread_getspecific(thrd_recursion_counter);
     assert( threc > 0 );
 
+    assert( gc_anch.gc_pending <= gc_anch.thr_count );
     if( 0 == --threc ) --gc_anch.thr_count;
-    assert( gc_anch.gc_waiting_enter <=
-            gc_anch.gc_pending + gc_anch.thr_count );
-
-    if( gc_anch.gc_waiting_enter > 0 )
+    if( gc_anch.gc_waiting > 0 )
     {
-        if( gc_anch.gc_waiting_enter ==
-            gc_anch.gc_pending + gc_anch.thr_count )
+        if( gc_anch.gc_pending == gc_anch.thr_count )
         {
-            e = pthread_cond_broadcast(&gc_anch.cv_gc_enter);
+            e = pthread_cond_broadcast(&gc_anch.cv_counter);
             assert( e == 0 ); // 2024-02-24: cannot recover from this error.
         }
     }
@@ -404,7 +355,7 @@ int s2gc_thrd_unlock()
 // returns -1 to indicate errors.
 static int s2gc_gcop_lock(long id)
 {
-    int ret = 0;
+    //- int ret = 0;
     int e = 0;
     intptr_t threc;
 
@@ -418,7 +369,7 @@ static int s2gc_gcop_lock(long id)
         // synchronization. However, the GC operation internal
         // protection was missing. The following line is added to
         // retroactively fix that.
-        gc_anch.gc_inprogress = true;
+        gc_anch.stateguard = stateguard_gc_operating;
 
         // The application is single-threaded, no need to lock.
         return 1; // This return value is special & specific *here*.
@@ -429,77 +380,57 @@ static int s2gc_gcop_lock(long id)
 
     s2gc_thrd_recursion_initializer();
 
-    // 2024-08-13:
-    //
-    // A rare-occuring behavior was observed where 3 separate threads
-    // simultaneously waits on state-guard, gc-enter cv, and gc-leave cv.
-    // Debug trace show that state-guard has value 2 at this instance,
-    // suggesting issue roots externally to the gcop-{,un}lock functions.
-    //
-    // It is possible that a reader/shared lock is requested while some
-    // threads are waiting 1.) to enter GC and 2.) for the state-guard
-    // to reset to 0 or set to 1. These occur by virtue of CV broadcast
-    // from the gcop-{,un}lock call in one or more thread(s).
-    //
-    while( gc_anch.stateguard != 0 && gc_anch.stateguard != 1 )
+    while( gc_anch.stateguard != stateguard_free &&
+           gc_anch.stateguard != stateguard_gc_waiting )
     {
-        e = pthread_cond_wait(&gc_anch.cv_gc_enter, &gc_anch.lck_master);
+        e = pthread_cond_wait(&gc_anch.cv_state, &gc_anch.lck_master);
         assert( e == 0 );
     }
-    gc_anch.stateguard = 1;
+    gc_anch.stateguard = stateguard_gc_waiting;
 
     threc = (intptr_t)pthread_getspecific(thrd_recursion_counter);
     assert( threc >= 0 );
 
-    gc_anch.gc_waiting_enter ++;
-    if( threc == 0 ) gc_anch.gc_pending ++;
+    gc_anch.gc_waiting ++;
+    if( threc > 0 ) gc_anch.gc_pending ++;
 
-    while( gc_anch.gc_waiting_enter < gc_anch.gc_pending + gc_anch.thr_count )
+    while( gc_anch.gc_pending < gc_anch.thr_count )
     {
         // gc_waiting_enter is definitely >0.
-        e = pthread_cond_wait(&gc_anch.cv_gc_enter, &gc_anch.lck_master);
+        e = pthread_cond_wait(&gc_anch.cv_counter, &gc_anch.lck_master);
         assert( e == 0 ); // 2024-02-24: caller can't recover from this error.
     }
 
-    gc_anch.stateguard = 2;
-
-    if( !gc_anch.gc_inprogress )
+    if( gc_anch.stateguard == stateguard_gc_operating )
     {
-        ret = 1;
-    }
-    else
-    {
-        ret = 0;
-        gc_anch.gc_inprogress = true;
+        pthread_mutex_unlock(&gc_anch.lck_master);
+        return 0;
     }
 
-    // 2024-02-24 (low-priority):
-    // maybe allow application to specify a thread to run GC?
-    // shouldn't be (too) difficult to implement.
-
-    // 2024-02-24 note after testing: help waiting peers to wake up.
-    pthread_cond_broadcast(&gc_anch.cv_gc_enter);
+    // else
+    gc_anch.stateguard = stateguard_gc_operating;
 
     // 2024-05-18: ignoring (possibly fatal) error(s) for now.
-    pthread_cond_broadcast(&gc_anch.cv_gc_leave);
-    pthread_cond_broadcast(&gc_anch.cv_threads);
+    // 2025-06-09: still ignoring.
+    pthread_cond_broadcast(&gc_anch.cv_state);
+    pthread_cond_broadcast(&gc_anch.cv_counter);
 
     pthread_mutex_unlock(&gc_anch.lck_master);
-    return ret;
+    return 1;
 }
 
 static int s2gc_gcop_unlock(long id)
 {
     int e = 0;
-    //- intptr_t threc;
+    intptr_t threc;
 
     (void)id; // 2024-05-19: was for debugging.
 
     if( !gc_anch.threaded )
     {
         // 2024-08-28:
-        // See note in `s2gc_gcop_lock` dated today.x
-        gc_anch.gc_inprogress = false;
+        // See note in `s2gc_gcop_lock` dated today.
+        gc_anch.stateguard = stateguard_free;
 
         // The application is single-threaded, no need to lock.
         return 1; // This return value is special & specific *here*.
@@ -510,60 +441,32 @@ static int s2gc_gcop_unlock(long id)
 
     s2gc_thrd_recursion_initializer();
 
-    while( gc_anch.stateguard != 2 )
+    while( gc_anch.stateguard != stateguard_gc_operating &&
+           gc_anch.stateguard != stateguard_gc_completing )
     {
-        e = pthread_cond_wait(&gc_anch.cv_gc_leave, &gc_anch.lck_master);
+        e = pthread_cond_wait(&gc_anch.cv_state, &gc_anch.lck_master);
         assert( e == 0 );
     }
+    gc_anch.stateguard = stateguard_gc_completing;
 
-    ++gc_anch.gc_waiting_leave;
+    --gc_anch.gc_waiting;
 
-    //- threc = (intptr_t)pthread_getspecific(thrd_recursion_counter);
-    //- assert( threc >= 0 );
-    //- if( threc > 0 ) --gc_anch.gc_pending;
-
-    while( gc_anch.gc_waiting_enter > gc_anch.gc_waiting_leave )
+    while( gc_anch.gc_waiting > 0 )
     {
-        // 2024-02-24:
-        // Take this example (t means thread, g means
-        // garbage collector, l means lock, u means unlock):
-        // ---------------
-        // Thrd 1 | Thrd 2
-        // T L    |
-        // G L    |
-        //        | G L
-        // G U    |
-        // t u    | g u <-- notice here.
-        // ---------------
-        // We need to stall all the threads that requested GC
-        // until the GC is complete, otherwise, the atomicity
-        // invariant of `*_gcop_{,un}lock` will be violated.
-
-        e = pthread_cond_wait(&gc_anch.cv_gc_leave, &gc_anch.lck_master);
+        e = pthread_cond_wait(&gc_anch.cv_counter, &gc_anch.lck_master);
         assert( e == 0 ); // 2024-02-24: caller can't recover from this error.
     }
 
-    --gc_anch.gc_waiting_enter;
-    --gc_anch.gc_waiting_leave;
-    if( gc_anch.gc_waiting_leave == 0 )
-    {
-        assert( gc_anch.gc_waiting_enter == 0 );
-        gc_anch.gc_inprogress = false;
+    threc = (intptr_t)pthread_getspecific(thrd_recursion_counter);
+    assert( threc >= 0 );
+    if( threc > 0 ) --gc_anch.gc_pending;
 
-        // 2024-06-30:
-        // was consulting `threc`. now arbitriating.
-        gc_anch.gc_pending = 0;
-
-        // 2024-06-03:
-        // final line after refactoring ''state guard''
-        // previously known as ''guarding state''.
-        gc_anch.stateguard = 0;
-    }
+    gc_anch.stateguard = stateguard_free;
 
     // 2024-02-24: ignoring (possibly fatal) error(s) for now.
-    pthread_cond_broadcast(&gc_anch.cv_gc_leave);
-    pthread_cond_broadcast(&gc_anch.cv_gc_enter);
-    pthread_cond_broadcast(&gc_anch.cv_threads);
+    // 2025-06-09: still ignoring.
+    pthread_cond_broadcast(&gc_anch.cv_state);
+    pthread_cond_broadcast(&gc_anch.cv_counter);
 
     pthread_mutex_unlock(&gc_anch.lck_master);
     return 0;
