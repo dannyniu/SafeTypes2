@@ -28,7 +28,7 @@
 #define T struct s2ctx_data
 typedef T s2data_t;
 
-#define DATA_INLINE_MAX 19
+#define DATA_INLINE_MAX 47
 
 struct s2ctx_data {
     s2obj_base;
