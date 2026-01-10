@@ -182,8 +182,8 @@ int s2list_shift(T *list, s2obj_t **out)
     // refuted by a note dated 2023-07-27. This version was never published,
     // and the 2023-07-27 note applied to the older GC in the original
     // SafeTypes library - it is irrelevant in SafeTypes2.
-    ++ (*out)->refcnt;
-    -- (*out)->keptcnt;
+    s2obj_retain(*out);
+    s2obj_leave(*out);
 
     -- list->len;
 
