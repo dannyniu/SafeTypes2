@@ -3,6 +3,8 @@
 #define safetypes2_implementing_obj
 #include "s2obj.h"
 
+typedef s2obj_base s2obj_base_t;
+
 #ifndef SAFETYPES2_BUILD_WITHOUT_GC
 
 #if __has_include(<pthread.h>)
@@ -169,12 +171,26 @@ void s2gc_set_threading(bool enabled)
 
 T *s2obj_retain(T *restrict obj)
 {
+    if( !((s2obj_base_t *)obj)->pobj )
+    {
+        // [2026-03-08:static-alloc]:
+        // Allow statically allocated objects to opt-out
+        // from garbage collection.
+        return obj;
+    }
+
     ++obj->refcnt;
     return obj;
 }
 
 T *s2obj_keep(T *restrict obj)
 {
+    if( !((s2obj_base_t *)obj)->pobj )
+    {
+        // See [2026-03-08:static-alloc] note in `s2obj_retain`.
+        return obj;
+    }
+
 #ifndef SAFETYPES2_BUILD_WITHOUT_GC
     ++obj->keptcnt;
     return obj;
@@ -185,6 +201,12 @@ T *s2obj_keep(T *restrict obj)
 
 void s2obj_release(T *restrict obj)
 {
+    if( !((s2obj_base_t *)obj)->pobj )
+    {
+        // See [2026-03-08:static-alloc] note in `s2obj_retain`.
+        return;
+    }
+
     if( obj->guard == 1 ) return; // Added 2024-02-26.
 
     assert( obj->refcnt > 0 );
@@ -221,6 +243,12 @@ void s2obj_release(T *restrict obj)
 
 void s2obj_leave(T *restrict obj)
 {
+    if( !((s2obj_base_t *)obj)->pobj )
+    {
+        // See [2026-03-08:static-alloc] note in `s2obj_retain`.
+        return;
+    }
+
 #ifndef SAFETYPES2_BUILD_WITHOUT_GC
     if( obj->guard == 1 ) return;
 
