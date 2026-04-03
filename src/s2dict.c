@@ -16,6 +16,7 @@
 static_assert( S2_DICT_HASH_MAX == 16,
                "Code changed too radically, cannot compile!");
 static uint8_t key_siphash[S2_DICT_HASH_MAX];
+const uint8_t *s2dict_siphash_key = key_siphash;
 
 void siphash_setkey(void const *in, size_t inlen)
 {
@@ -69,22 +70,21 @@ static void s2dict_final(T *dict)
     }
 }
 
-struct s2ctx_dict_iter {
-    struct s2ctx_iter base;
-    int iterlevel;
-    int iterpos[S2_DICT_HASH_MAX];
-    s2dict_t *dict;
-};
-
-static int s2dict_iter_step(s2dict_iter_t *restrict iter);
 static s2dict_iter_t *s2dict_iter_create(T *restrict dict)
 {
     s2dict_iter_t *iter = NULL;
-    int i;
 
     iter = calloc(1, sizeof(s2dict_iter_t));
     if( !iter ) return NULL;
 
+    s2dict_iter_init(iter, dict);
+
+    return iter;
+}
+
+int s2dict_iter_init(s2dict_iter_t *restrict iter, T *restrict dict)
+{
+    int i;
     iter->base.final = (s2iter_final_func_t)free;
     iter->base.next = (s2iter_stepfunc_t)s2dict_iter_step;
     iter->iterlevel = 0;
@@ -93,7 +93,7 @@ static s2dict_iter_t *s2dict_iter_create(T *restrict dict)
     for(i=0; i<S2_DICT_HASH_MAX; i++)
         iter->iterpos[i] = 0;
 
-    return iter;
+    return 0;
 }
 
 T *s2dict_create()
@@ -377,7 +377,7 @@ int s2dict_set(T *dict, s2data_t *key, s2obj_t *value, int semantic)
     return s2_access_success;
 }
 
-static int s2dict_iter_step(s2dict_iter_t *iter)
+int s2dict_iter_step(s2dict_iter_t *iter)
 {
     int i, level;
     struct s2ctx_dict_table *V;

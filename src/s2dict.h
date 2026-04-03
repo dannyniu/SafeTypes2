@@ -133,7 +133,28 @@ int s2dict_unset(T *dict, s2data_t *key);
 /// @brief
 /// the dictionary iterator type that
 /// enumerates members in arbitrary order.
-typedef struct s2ctx_dict_iter s2dict_iter_t;
+typedef struct s2ctx_dict_iter {
+    struct s2ctx_iter base;
+    int iterlevel;
+    int iterpos[S2_DICT_HASH_MAX];
+    s2dict_t *dict;
+} s2dict_iter_t;
+
+// The following 3 declarations will be tested by
+// the DCC CXING implementation's runtime.
+
+// allows read-only access to siphash key.
+extern const uint8_t *s2dict_siphash_key;
+
+/// @fn
+/// @param iter the iterator context structure to initialize,
+/// @param dict the dictionary with which the iterator is initialized.
+/// @returns 0
+int s2dict_iter_init(s2dict_iter_t *restrict iter, T *restrict dict);
+
+/// @fn
+/// @param iter the iterator to step.
+int s2dict_iter_step(s2dict_iter_t *restrict iter);
 
 #ifndef safetypes2_implementing_dict
 #undef T
