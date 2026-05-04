@@ -221,7 +221,11 @@ T {
 /// types derived from `s2obj_t`.
 /// - The `pobj` field will point to the beginning address of the object,
 ///   which make it easy to refer to the object itself as an `s2obj_t`.
+///   Objects not created from s2gc_obj_alloc (e.g. declared on the stack
+///   or in static sections) should have this field set to `NULL` to
+///   have it ignored by `retain,release,keep,leave` operations.
 /// - The `ctxinfo` can hold contextual information for arbitrary purpose.
+///   SafeTypes2 functions will never modify this field.
 #define s2obj_base struct { s2obj_t base; s2obj_t *pobj; intptr_t ctxinfo; }
 
 /// @page objsys Object System
