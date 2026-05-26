@@ -558,10 +558,10 @@ void s2gc_collect(void)
         }
     }
 
+    oc = 0;
+    p = gc_anch.head;
     while( true )
     {
-        oc = 0;
-        p = gc_anch.head;
         if( !p ) break;
         assert( p );
 
@@ -570,9 +570,18 @@ void s2gc_collect(void)
             s2gc_obj_dealloc(p);
             oc++;
         }
-        else p = p->gc_next;
+        else
+        {
+            p = p->gc_next;
+            if( p ) continue;
+        }
 
-        if( oc > 0 ) continue;
+        if( oc > 0 )
+        {
+            oc = 0;
+            p = gc_anch.head;
+            continue;
+        }
         else break;
     }
 

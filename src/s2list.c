@@ -44,7 +44,7 @@ static s2list_iter_t *s2list_iter_create(T *list)
 {
     struct s2ctx_list_iter *ret;
 
-    ret = calloc(1, sizeof(struct s2ctx_list_iter));
+    ret = (calloc)(1, sizeof(struct s2ctx_list_iter));
     if( !ret ) return NULL;
 
     ret->base.final = (s2iter_final_func_t)free;

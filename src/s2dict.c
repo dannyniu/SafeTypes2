@@ -74,7 +74,7 @@ static s2dict_iter_t *s2dict_iter_create(T *restrict dict)
 {
     s2dict_iter_t *iter = NULL;
 
-    iter = calloc(1, sizeof(s2dict_iter_t));
+    iter = (calloc)(1, sizeof(s2dict_iter_t));
     if( !iter ) return NULL;
 
     s2dict_iter_init(iter, dict);
